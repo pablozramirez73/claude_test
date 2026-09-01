@@ -20,7 +20,13 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-RUN chmod +x entrypoint.sh
+# Strip any CRLF line endings entrypoint.sh may have picked up on the host
+# (e.g. Windows git checkouts with core.autocrlf=true convert it from the
+# repo's actual LF) — otherwise the shebang becomes `#!/bin/sh\r`, an
+# interpreter that doesn't exist, and `exec ./entrypoint.sh` fails with
+# "no such file or directory". Doing this at build time makes the image
+# work regardless of how the file landed on disk before `docker build`.
+RUN sed -i 's/\r$//' entrypoint.sh && chmod +x entrypoint.sh
 
 EXPOSE 8000
 

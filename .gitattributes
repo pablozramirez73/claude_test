@@ -1,0 +1,6 @@
+# Force LF line endings for shell scripts regardless of local git
+# core.autocrlf settings (common default on Windows) — a CRLF-terminated
+# shebang breaks Docker entrypoints (`exec: no such file or directory`).
+# apps/misura-backend/Dockerfile also strips \r at build time as a
+# belt-and-braces fix for anyone who already has a CRLF checkout.
+*.sh text eol=lf
