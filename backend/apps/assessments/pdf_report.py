@@ -49,6 +49,12 @@ SEVERITY_LABELS = {
     "INFO": "Informativo",
 }
 
+DURATION_LABELS = {
+    "SHORT": "fino a 1 ora",
+    "MODERATE": "da 1 a 2 ore",
+    "LONG": "da 2 a 8 ore",
+}
+
 MULTIPLIER_LABELS = {
     "LC": "LC - Costante di carico",
     "HM": "HM - Distanza orizzontale",
@@ -56,15 +62,15 @@ MULTIPLIER_LABELS = {
     "DM": "DM - Dislocazione verticale",
     "AM": "AM - Asimmetria (torsione)",
     "FM": "FM - Frequenza",
-    "CM": "CM - Qualita' della presa",
+    "CM": "CM - Qualità della presa",
 }
 
 DISCLAIMER = (
-    "Il presente documento e' prodotto da un sistema automatico di pre-screening "
+    "Il presente documento è prodotto da un sistema automatico di pre-screening "
     "ergonomico basato su analisi video on-device (MediaPipe Pose) e su sensori "
     "del dispositivo mobile. Costituisce elemento istruttorio a supporto della "
     "valutazione dei rischi e non sostituisce la valutazione del Datore di Lavoro "
-    "ai sensi dell'art. 28 del D.Lgs 81/08, ne' il rilievo strumentale certificato "
+    "ai sensi dell'art. 28 del D.Lgs 81/08, né il rilievo strumentale certificato "
     "per rumore e illuminamento. I valori di illuminamento e rumore sono acquisiti "
     "con i sensori dello smartphone e hanno valore indicativo."
 )
@@ -112,7 +118,10 @@ def _fmt(value, suffix="", nd=1, dash="n.d."):
 
 
 def _kv_table(rows, styles, col_widths=(58 * mm, 112 * mm)):
-    data = [[Paragraph(f"<b>{k}</b>", styles["cell"]), Paragraph(str(v), styles["cell"])] for k, v in rows]
+    data = [
+        [Paragraph(f"<b>{k}</b>", styles["cell"]), Paragraph(str(v), styles["cell"])]
+        for k, v in rows
+    ]
     table = Table(data, colWidths=list(col_widths), hAlign="LEFT")
     table.setStyle(
         TableStyle(
@@ -139,7 +148,8 @@ def _score_banner(assessment, styles):
         styles["score"],
     )
     label_cell = Paragraph(
-        f'<font size="13" color="{color.hexval()}"><b>{LEVEL_LABELS.get(level, level)}</b></font><br/>'
+        f'<font size="13" color="{color.hexval()}">'
+        f'<b>{LEVEL_LABELS.get(level, level)}</b></font><br/>'
         f'<font size="9" color="#444444">Indice di rischio ergonomico complessivo</font>',
         styles["cell"],
     )
@@ -160,7 +170,7 @@ def _score_banner(assessment, styles):
 
 
 def _findings_table(findings, styles):
-    header = ["Gravita'", "Rilievo", "Misura", "Riferimento", "Azione correttiva"]
+    header = ["Gravità", "Rilievo", "Misura", "Riferimento", "Azione correttiva"]
     data = [[Paragraph(f"<b>{h}</b>", styles["cell"]) for h in header]]
     row_styles = []
 
@@ -186,7 +196,12 @@ def _findings_table(findings, styles):
         )
         if severity in {"CRITICAL", "HIGH"}:
             row_styles.append(
-                ("TEXTCOLOR", (0, index), (0, index), LEVEL_COLORS["RED" if severity == "CRITICAL" else "ORANGE"])
+                (
+                    "TEXTCOLOR",
+                    (0, index),
+                    (0, index),
+                    LEVEL_COLORS["RED" if severity == "CRITICAL" else "ORANGE"],
+                )
             )
 
     table = Table(data, colWidths=[16 * mm, 55 * mm, 20 * mm, 32 * mm, 47 * mm], repeatRows=1)
@@ -210,7 +225,8 @@ def _niosh_table(assessment, styles):
     rows = [["Fattore", "Valore"]]
     for key, label in MULTIPLIER_LABELS.items():
         if key in multipliers:
-            rows.append([label, f"{multipliers[key]:.3f}" if key != "LC" else f"{multipliers[key]:.0f} kg"])
+            value = f"{multipliers[key]:.0f} kg" if key == "LC" else f"{multipliers[key]:.3f}"
+            rows.append([label, value])
     if len(rows) == 1:
         return None
 
@@ -298,11 +314,17 @@ def build_report(assessment, watermark: bool = False) -> bytes:
         ]
     )
 
+    method = (
+        "NIOSH / ISO 11228-1"
+        if assessment.type == "LIFT"
+        else "ISO 11226 - analisi posturale"
+    )
+
     story = []
     story.append(Paragraph("Report di valutazione ergonomica", styles["title"]))
     story.append(
         Paragraph(
-            f"Metodo: {'NIOSH / ISO 11228-1' if assessment.type == 'LIFT' else 'ISO 11226 - analisi posturale'}"
+            f"Metodo: {method}"
             f" &middot; ID valutazione {assessment.pk}",
             styles["subtitle"],
         )
@@ -339,8 +361,8 @@ def build_report(assessment, watermark: bool = False) -> bytes:
         if isinstance(raw, dict):
             mean = raw.get("mean")
             p95 = raw.get("p95")
-            return f"medio {_fmt(mean, ' gradi', 0)} / 95o perc. {_fmt(p95, ' gradi', 0)}"
-        return _fmt(raw, " gradi", 0)
+            return f"medio {_fmt(mean, '°', 0)} / P95 {_fmt(p95, '°', 0)}"
+        return _fmt(raw, "°", 0)
 
     story.append(
         _kv_table(
@@ -350,10 +372,10 @@ def build_report(assessment, watermark: bool = False) -> bytes:
                 ("Elevazione braccio", _angle_value("shoulder_elevation_deg")),
                 ("Flessione collo", _angle_value("neck_flexion_deg")),
                 ("Angolo ginocchio", _angle_value("knee_angle_deg")),
-                ("Qualita' della presa", pose.get("hand_grip", "n.d.")),
+                ("Qualità della presa", pose.get("hand_grip", "n.d.")),
                 ("Illuminamento", _fmt(assessment.light_lux, " lux", 0)),
                 ("Rumore ambientale", _fmt(assessment.noise_db, " dB(A)", 0)),
-                ("Stabilita' dispositivo", _fmt(assessment.device_tilt_deg, " gradi", 2)),
+                ("Stabilità dispositivo", _fmt(assessment.device_tilt_deg, "°", 2)),
                 (
                     "Acquisizione",
                     f"{assessment.frames_analyzed} frame in {_fmt(assessment.duration_s, ' s', 1)}",
@@ -376,7 +398,10 @@ def build_report(assessment, watermark: bool = False) -> bytes:
                     ),
                     ("Indice di sollevamento (IS)", _fmt(assessment.lifting_index, "", 2)),
                     ("Frequenza", _fmt(task.get("freq_per_min"), " sollevamenti/min", 1)),
-                    ("Durata del compito", str(task.get("duration", "-"))),
+                    (
+                        "Durata del compito",
+                        DURATION_LABELS.get(str(task.get("duration", "")).upper(), "-"),
+                    ),
                 ],
                 styles,
             )
@@ -403,7 +428,7 @@ def build_report(assessment, watermark: bool = False) -> bytes:
     else:
         story.append(
             Paragraph(
-                "Nessuna non conformita' rilevata: i parametri misurati rientrano "
+                "Nessuna non conformità rilevata: i parametri misurati rientrano "
                 "nelle soglie di riferimento.",
                 styles["body"],
             )

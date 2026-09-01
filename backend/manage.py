@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Utility a riga di comando per le attivita' amministrative di Django."""
+"""Utility a riga di comando per le attività amministrative di Django."""
 import os
 import sys
 
@@ -10,8 +10,8 @@ def main():
         from django.core.management import execute_from_command_line
     except ImportError as exc:
         raise ImportError(
-            "Django non risulta importabile. E' installato e l'ambiente "
-            "virtuale e' attivo?"
+            "Django non risulta importabile. È installato e l'ambiente "
+            "virtuale è attivo?"
         ) from exc
     execute_from_command_line(sys.argv)
 

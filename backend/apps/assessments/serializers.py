@@ -1,7 +1,7 @@
 from django.conf import settings
 from rest_framework import serializers
 
-from apps.billing.plans import QuotaExceeded, check_quota
+from apps.billing.plans import check_quota
 
 from . import niosh_calculator as calc
 from .models import Assessment
@@ -99,14 +99,21 @@ class AssessmentSerializer(serializers.ModelSerializer):
             task = attrs.get("task_data") or {}
             if not task.get("load_kg"):
                 raise serializers.ValidationError(
-                    {"task_data": "Per il sollevamento e' obbligatorio il peso del carico (load_kg)."}
+                    {
+                        "task_data": "Per il sollevamento è obbligatorio il peso "
+                        "del carico (load_kg)."
+                    }
                 )
             try:
                 load = float(task["load_kg"])
-            except (TypeError, ValueError):
-                raise serializers.ValidationError({"task_data": "load_kg deve essere numerico."})
+            except (TypeError, ValueError) as exc:
+                raise serializers.ValidationError(
+                    {"task_data": "load_kg deve essere numerico."}
+                ) from exc
             if not 0 < load <= 200:
-                raise serializers.ValidationError({"task_data": "load_kg fuori intervallo (0-200 kg)."})
+                raise serializers.ValidationError(
+                    {"task_data": "load_kg fuori intervallo (0-200 kg)."}
+                )
 
         tilt = attrs.get("device_tilt_deg")
         if tilt is not None and tilt > settings.ERGO_MAX_TILT_DEG * 5:
@@ -137,7 +144,7 @@ class AssessmentSerializer(serializers.ModelSerializer):
 
         if result.multipliers:
             # I moltiplicatori NIOSH restano allegati alla valutazione: il report
-            # deve poter mostrare come si e' arrivati al peso limite.
+            # deve poter mostrare come si è arrivati al peso limite.
             validated_data.setdefault("task_data", {})
             validated_data["task_data"]["_multipliers"] = result.multipliers
 

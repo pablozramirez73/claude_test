@@ -45,7 +45,7 @@ class AssessmentConsumer(AsyncJsonWebsocketConsumer):
             await self.channel_layer.group_discard(self.group_name, self.channel_name)
 
     async def receive(self, text_data=None, bytes_data=None):
-        # Il canale e' di sola lettura: si risponde solo al ping di keepalive.
+        # Il canale è di sola lettura: si risponde solo al ping di keepalive.
         try:
             payload = json.loads(text_data or "{}")
         except json.JSONDecodeError:

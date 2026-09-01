@@ -1,9 +1,9 @@
 from rest_framework import status
 from rest_framework.decorators import action
+from rest_framework.mixins import RetrieveModelMixin, UpdateModelMixin
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import GenericViewSet
-from rest_framework.mixins import RetrieveModelMixin, UpdateModelMixin
 
 from apps.assessments.permissions import IsCompanyMember
 

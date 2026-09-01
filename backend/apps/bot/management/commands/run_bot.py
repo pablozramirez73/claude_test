@@ -4,7 +4,7 @@ from django.core.management.base import BaseCommand, CommandError
 
 
 class Command(BaseCommand):
-    help = "Avvia il bot Telegram di ErgoCheck in modalita' polling."
+    help = "Avvia il bot Telegram di ErgoCheck in modalità polling."
 
     def handle(self, *args, **options):
         if not settings.TELEGRAM_BOT_TOKEN:

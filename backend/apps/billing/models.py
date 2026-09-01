@@ -48,3 +48,8 @@ class WebhookEvent(models.Model):
 
     class Meta:
         ordering = ["-created_at"]
+        verbose_name = "evento webhook"
+        verbose_name_plural = "eventi webhook"
+
+    def __str__(self):
+        return f"{self.type} ({self.stripe_event_id})"

@@ -76,12 +76,20 @@ def deliver_report_to_telegram(self, assessment_id: int):
     if not chat_id:
         return {"status": "no_chat"}
 
-    emoji = {"GREEN": "\U0001F7E2", "YELLOW": "\U0001F7E1", "ORANGE": "\U0001F7E0", "RED": "\U0001F534"}
+    emoji = {
+        "GREEN": "\U0001F7E2",
+        "YELLOW": "\U0001F7E1",
+        "ORANGE": "\U0001F7E0",
+        "RED": "\U0001F534",
+    }
     top = (assessment.findings or [])[:3]
-    bullet_list = "\n".join(f"• {f.get('title', '')}" for f in top) or "• Nessuna criticita' rilevata"
+    bullet_list = (
+        "\n".join(f"• {f.get('title', '')}" for f in top) or "• Nessuna criticità rilevata"
+    )
 
     caption = (
-        f"{emoji.get(assessment.risk_level, '')} <b>{LEVEL_LABELS.get(assessment.risk_level, '')}</b> "
+        f"{emoji.get(assessment.risk_level, '')} "
+        f"<b>{LEVEL_LABELS.get(assessment.risk_level, '')}</b> "
         f"— punteggio {assessment.risk_score:.0f}/100\n"
         f"<b>{assessment.get_type_display()}</b>"
         f"{f' · {assessment.workstation}' if assessment.workstation else ''}"
@@ -150,7 +158,7 @@ def notify_assessment_ready(assessment_id: int):
 @shared_task
 def purge_stale_reports(days: int = 730):
     """
-    Manutenzione: i PDF piu' vecchi del periodo di conservazione vengono
+    Manutenzione: i PDF più vecchi del periodo di conservazione vengono
     rimossi dallo storage, il record resta per la statistica.
     """
     from datetime import timedelta

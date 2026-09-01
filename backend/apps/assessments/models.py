@@ -14,7 +14,7 @@ class RiskLevel(models.TextChoices):
 class Assessment(models.Model):
     """
     Una singola valutazione: il telefono analizza la posa on-device e invia
-    qui solo i valori aggregati (angoli medi/percentili, lux, dB, stabilita').
+    qui solo i valori aggregati (angoli medi/percentili, lux, dB, stabilità).
     Nessun frame video lascia il dispositivo.
     """
 
@@ -56,7 +56,9 @@ class Assessment(models.Model):
     risk_score = models.FloatField(
         validators=[MinValueValidator(0), MaxValueValidator(100)], default=0
     )
-    risk_level = models.CharField(max_length=6, choices=RiskLevel.choices, default=RiskLevel.ACCEPTABLE)
+    risk_level = models.CharField(
+        max_length=6, choices=RiskLevel.choices, default=RiskLevel.ACCEPTABLE
+    )
     # Esito NIOSH (solo per type=LIFT)
     lifting_index = models.FloatField(null=True, blank=True)
     recommended_weight_limit = models.FloatField(null=True, blank=True)
@@ -91,7 +93,7 @@ class Assessment(models.Model):
 
     @property
     def is_compliant(self):
-        """Conformita' di massima ai requisiti minimi ambientali e posturali."""
+        """Conformità di massima ai requisiti minimi ambientali e posturali."""
         return self.risk_level in {RiskLevel.ACCEPTABLE, RiskLevel.ATTENTION}
 
     @property
@@ -113,3 +115,9 @@ class ReportDelivery(models.Model):
 
     class Meta:
         ordering = ["-created_at"]
+        verbose_name = "consegna report"
+        verbose_name_plural = "consegne report"
+
+    def __str__(self):
+        outcome = "inviato" if self.ok else "non riuscito"
+        return f"Report #{self.assessment_id} -> chat {self.chat_id} ({outcome})"

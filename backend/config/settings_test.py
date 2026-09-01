@@ -1,7 +1,7 @@
 """
 Settings usati dalla suite di test.
 
-Le variabili sono impostate prima di importare `config.settings` perche'
+Le variabili sono impostate prima di importare `config.settings` perché
 quest'ultimo legge l'ambiente al momento dell'import.
 """
 import os

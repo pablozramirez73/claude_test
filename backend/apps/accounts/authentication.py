@@ -13,7 +13,7 @@ class TelegramInitDataAuthentication(authentication.BaseAuthentication):
       * header `X-Telegram-Init-Data: <initData>`
       * header `Authorization: tma <initData>`
 
-    Ogni richiesta e' autoconsistente: non ci sono sessioni lato server, la
+    Ogni richiesta è autoconsistente: non ci sono sessioni lato server, la
     firma HMAC viene verificata a ogni chiamata.
     """
 

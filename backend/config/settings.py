@@ -196,9 +196,9 @@ if not DEBUG:
 TELEGRAM_BOT_TOKEN = env("TELEGRAM_BOT_TOKEN", default="")
 TELEGRAM_BOT_USERNAME = env("TELEGRAM_BOT_USERNAME", default="ErgoCheckBot")
 TELEGRAM_WEBHOOK_SECRET = env("TELEGRAM_WEBHOOK_SECRET", default="")
-# URL https da cui e' servita la Mini App (usato nei pulsanti WebApp del bot).
+# URL https da cui è servita la Mini App (usato nei pulsanti WebApp del bot).
 TMA_URL = env("TMA_URL", default="https://ergocheck.example.com")
-# Finestra di validita' di initData: oltre questa soglia la firma e' rifiutata.
+# Finestra di validità di initData: oltre questa soglia la firma è rifiutata.
 TELEGRAM_INITDATA_MAX_AGE = timedelta(hours=env.int("TELEGRAM_INITDATA_MAX_AGE_H", default=24))
 
 # ---------------------------------------------------------------------- billing

@@ -54,12 +54,12 @@ def test_create_lift_assessment_computes_score_and_report(api, company, no_teleg
     assert any(f["code"] == "TRUNK_FLEXION" for f in body["findings"])
 
     assessment = Assessment.objects.get(pk=body["id"])
-    # Celery gira in modalita' eager: il PDF esiste gia' a fine richiesta.
+    # Celery gira in modalità eager: il PDF esiste gia' a fine richiesta.
     assessment.refresh_from_db()
     assert assessment.status == Assessment.Status.READY
     assert assessment.pdf_report.name.endswith(".pdf")
     assert assessment.task_data["_multipliers"]["HM"] == pytest.approx(25 / 45, abs=1e-3)
-    # Il report e' stato recapitato al gruppo aziendale.
+    # Il report è stato recapitato al gruppo aziendale.
     assert no_telegram and no_telegram[0]["chat_id"] == company.telegram_chat_id
 
 
@@ -125,9 +125,10 @@ def test_free_plan_quota_returns_402(api, company):
 
 @pytest.mark.django_db
 def test_assessments_are_scoped_to_own_company(api, company, db):
+    from rest_framework.test import APIClient
+
     from apps.accounts.models import Company, TelegramUser
     from tests.factories import build_init_data
-    from rest_framework.test import APIClient
 
     api.post("/api/v1/assessments/", LIFT_PAYLOAD, format="json")
 

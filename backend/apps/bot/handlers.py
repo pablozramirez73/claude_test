@@ -6,7 +6,7 @@ Il bot ha tre compiti:
   * /collega - registra il gruppo corrente come destinatario dei report
   * /ultime - riepilogo delle ultime valutazioni dell'azienda
 
-Puo' girare in polling (`python manage.py run_bot`) oppure via webhook
+Può girare in polling (`python manage.py run_bot`) oppure via webhook
 (endpoint in apps/bot/views.py).
 """
 import logging
@@ -87,7 +87,7 @@ async def link_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     if company is False:
         await update.effective_message.reply_html(
-            "Solo il ruolo RSPP o amministratore puo' collegare il gruppo."
+            "Solo il ruolo RSPP o amministratore può collegare il gruppo."
         )
         return
 
@@ -119,7 +119,12 @@ async def last_assessments(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.effective_message.reply_html("Nessuna valutazione registrata finora.")
         return
 
-    emoji = {"GREEN": "\U0001F7E2", "YELLOW": "\U0001F7E1", "ORANGE": "\U0001F7E0", "RED": "\U0001F534"}
+    emoji = {
+        "GREEN": "\U0001F7E2",
+        "YELLOW": "\U0001F7E1",
+        "ORANGE": "\U0001F7E0",
+        "RED": "\U0001F534",
+    }
     lines = [
         f"{emoji.get(a.risk_level, '')} <b>{a.risk_score:.0f}</b> · {a.get_type_display()} · "
         f"{a.created_at.strftime('%d/%m %H:%M')}"
@@ -132,7 +137,7 @@ async def plans(update: Update, context: ContextTypes.DEFAULT_TYPE):
     from apps.billing.plans import PLANS
 
     lines = []
-    for code, data in PLANS.items():
+    for data in PLANS.values():
         price = "gratis" if not data["price_eur"] else f"{data['price_eur']}&euro;/mese"
         quota = "illimitate" if data["quota"] is None else f"{data['quota']} valutazioni"
         lines.append(f"<b>{data['label']}</b> — {price} · {quota}")

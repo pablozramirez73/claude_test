@@ -8,7 +8,7 @@ Algoritmo ufficiale (Telegram Bot API, Mini Apps):
     expected          = HMAC_SHA256(key=secret_key, msg=data_check_string).hexdigest()
 
 Il confronto con l'hash ricevuto avviene in tempo costante. Oltre alla firma
-viene verificata l'eta' di `auth_date`: una initData valida ma vecchia e' un
+viene verificata l'età di `auth_date`: una initData valida ma vecchia è un
 replay, quindi viene rifiutata dopo TELEGRAM_INITDATA_MAX_AGE.
 """
 from __future__ import annotations
@@ -17,7 +17,7 @@ import hashlib
 import hmac
 import json
 from dataclasses import dataclass, field
-from datetime import datetime, timezone as dt_timezone
+from datetime import UTC, datetime
 from urllib.parse import parse_qsl
 
 from django.conf import settings
@@ -87,11 +87,11 @@ def verify_init_data(
     auth_date = None
     if parsed.get("auth_date"):
         try:
-            auth_date = datetime.fromtimestamp(int(parsed["auth_date"]), tz=dt_timezone.utc)
+            auth_date = datetime.fromtimestamp(int(parsed["auth_date"]), tz=UTC)
         except (ValueError, OSError) as exc:
             raise InitDataError("auth_date non valida") from exc
         if max_age is not None:
-            age = datetime.now(dt_timezone.utc) - auth_date
+            age = datetime.now(UTC) - auth_date
             if age > max_age:
                 raise InitDataError("initData scaduta, riapri la Mini App")
 
@@ -102,7 +102,7 @@ def verify_init_data(
         try:
             return json.loads(raw_value)
         except json.JSONDecodeError as exc:
-            raise InitDataError(f"Campo {name} non e' JSON valido") from exc
+            raise InitDataError(f"Campo {name} non è JSON valido") from exc
 
     return TelegramInitData(
         user=_json_field("user"),

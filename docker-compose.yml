@@ -1,0 +1,82 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ergocheck
+      POSTGRES_USER: ergocheck
+      POSTGRES_PASSWORD: ergocheck
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ergocheck"]
+      interval: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      retries: 10
+
+  api:
+    build: ./backend
+    env_file: ./backend/.env
+    environment:
+      DATABASE_URL: postgres://ergocheck:ergocheck@db:5432/ergocheck
+      REDIS_URL: redis://redis:6379/0
+    command: >
+      sh -c "python manage.py migrate &&
+             daphne -b 0.0.0.0 -p 8000 config.asgi:application"
+    ports:
+      - "8000:8000"
+    volumes:
+      - media:/app/media
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  worker:
+    build: ./backend
+    env_file: ./backend/.env
+    environment:
+      DATABASE_URL: postgres://ergocheck:ergocheck@db:5432/ergocheck
+      REDIS_URL: redis://redis:6379/0
+    command: celery -A config worker -l info --concurrency 2
+    volumes:
+      - media:/app/media
+    depends_on:
+      - api
+
+  beat:
+    build: ./backend
+    env_file: ./backend/.env
+    environment:
+      DATABASE_URL: postgres://ergocheck:ergocheck@db:5432/ergocheck
+      REDIS_URL: redis://redis:6379/0
+    command: celery -A config beat -l info
+    depends_on:
+      - api
+
+  bot:
+    build: ./backend
+    env_file: ./backend/.env
+    environment:
+      DATABASE_URL: postgres://ergocheck:ergocheck@db:5432/ergocheck
+      REDIS_URL: redis://redis:6379/0
+    command: python manage.py run_bot
+    depends_on:
+      - api
+
+  tma:
+    build: ./frontend_tma
+    ports:
+      - "5173:80"
+    depends_on:
+      - api
+
+volumes:
+  pgdata:
+  media:

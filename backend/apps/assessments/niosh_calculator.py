@@ -6,12 +6,12 @@ Contiene tre blocchi indipendenti e testabili:
 1. `niosh_rwl` / `lifting_index` - equazione NIOSH rivista (1991), recepita in
    Italia dalla ISO 11228-1 e richiamata dall'Allegato XXXIII del D.Lgs 81/08.
 2. `score_posture` - punteggio posturale in stile RULA/REBA calcolato sugli
-   angoli medi e sul 95o percentile prodotti da MediaPipe.
-3. `score_environment` - conformita' ambientale (illuminamento, rumore) e
-   validita' tecnica dell'acquisizione (stabilita' del telefono).
+   angoli medi e sul P95 prodotti da MediaPipe.
+3. `score_environment` - conformità ambientale (illuminamento, rumore) e
+   validità tecnica dell'acquisizione (stabilità del telefono).
 
 `evaluate()` li combina in un unico punteggio 0-100 con l'elenco dei rilievi.
-Il modulo e' puro Python: nessun import di Django, cosi' e' testabile a parte.
+Il modulo è puro Python: nessun import di Django, così è testabile a parte.
 """
 from __future__ import annotations
 
@@ -65,14 +65,14 @@ _DURATION_OFFSET = {DURATION_SHORT: 0, DURATION_MODERATE: 2, DURATION_LONG: 4}
 
 MIN_LUX = 200.0  # Allegato XXXIV: illuminamento adeguato alla postazione VDT
 MAX_NOISE_DB = 80.0  # Titolo VIII Capo II: valore inferiore di azione LEX,8h
-MAX_TILT_DEG = 2.0  # oltre questa deviazione l'acquisizione non e' attendibile
+MAX_TILT_DEG = 2.0  # oltre questa deviazione l'acquisizione non è attendibile
 
 TRUNK_FLEXION_WARN = 20.0
 TRUNK_FLEXION_HIGH = 60.0
 TRUNK_TWIST_WARN = 15.0
 ARM_ELEVATION_WARN = 90.0
 NECK_FLEXION_WARN = 20.0
-EAR_FATIGUE_THRESHOLD = 0.21  # Eye Aspect Ratio sotto cui l'occhio e' chiuso
+EAR_FATIGUE_THRESHOLD = 0.21  # Eye Aspect Ratio sotto cui l'occhio è chiuso
 
 
 @dataclass
@@ -195,7 +195,7 @@ def frequency_multiplier(freq_per_min: float, duration: str, v_cm: float) -> flo
 
 
 def coupling_multiplier(coupling: str, v_cm: float) -> float:
-    """CM in base alla qualita' della presa rilevata dal Hand Landmarker."""
+    """CM in base alla qualità della presa rilevata dal Hand Landmarker."""
     values = _CM_TABLE.get((coupling or "FAIR").upper(), _CM_TABLE["FAIR"])
     return values[1] if v_cm >= 75 else values[0]
 
@@ -255,9 +255,9 @@ def score_from_lifting_index(li: float) -> float:
 
 def score_posture(pose: dict, assessment_type: str) -> tuple[float, list[Finding]]:
     """
-    Penalita' posturale 0-100 con i rilievi associati.
+    Penalità posturale 0-100 con i rilievi associati.
 
-    Gli angoli attesi in `pose` (gradi, gia' aggregati sul dispositivo):
+    Gli angoli attesi in `pose` (gradi, già aggregati sul dispositivo):
       trunk_flexion_deg, trunk_twist_deg, neck_flexion_deg,
       shoulder_elevation_deg, elbow_angle_deg, knee_angle_deg,
       wrist_deviation_deg, e opzionalmente ear (fatica) e hand_grip.
@@ -280,8 +280,8 @@ def score_posture(pose: dict, assessment_type: str) -> tuple[float, list[Finding
                 severity="HIGH" if trunk >= TRUNK_FLEXION_HIGH else "WARN",
                 title="Flessione del tronco oltre soglia",
                 detail=(
-                    f"Flessione rilevata (95o percentile) di {trunk:.0f}gradi, "
-                    f"oltre i {TRUNK_FLEXION_WARN:.0f}gradi raccomandati."
+                    f"Flessione rilevata (P95) di {trunk:.0f}°, "
+                    f"oltre i {TRUNK_FLEXION_WARN:.0f}° raccomandati."
                 ),
                 measured=round(trunk, 1),
                 threshold=TRUNK_FLEXION_WARN,
@@ -300,7 +300,7 @@ def score_posture(pose: dict, assessment_type: str) -> tuple[float, list[Finding
                 code="TRUNK_TWIST",
                 severity="HIGH" if twist > 30 else "WARN",
                 title="Torsione del busto",
-                detail=f"Torsione di {twist:.0f}gradi durante il compito.",
+                detail=f"Torsione di {twist:.0f}° durante il compito.",
                 measured=round(twist, 1),
                 threshold=TRUNK_TWIST_WARN,
                 reference="ISO 11228-1",
@@ -318,11 +318,13 @@ def score_posture(pose: dict, assessment_type: str) -> tuple[float, list[Finding
                 code="ARM_ELEVATION",
                 severity="HIGH" if shoulder > 120 else "WARN",
                 title="Braccia sopra la linea delle spalle",
-                detail=f"Elevazione del braccio di {shoulder:.0f}gradi.",
+                detail=f"Elevazione del braccio di {shoulder:.0f}°.",
                 measured=round(shoulder, 1),
                 threshold=ARM_ELEVATION_WARN,
                 reference="ISO 11226",
-                recommendation="Abbassare i ripiani sopra i 150 cm o dotare la postazione di scaletta.",
+                recommendation=(
+                    "Abbassare i ripiani sopra i 150 cm o dotare la postazione di scaletta."
+                ),
             )
         )
 
@@ -334,7 +336,7 @@ def score_posture(pose: dict, assessment_type: str) -> tuple[float, list[Finding
                 code="NECK_FLEXION",
                 severity="WARN",
                 title="Flessione del collo",
-                detail=f"Flessione cervicale di {neck:.0f}gradi.",
+                detail=f"Flessione cervicale di {neck:.0f}°.",
                 measured=round(neck, 1),
                 threshold=NECK_FLEXION_WARN,
                 reference="D.Lgs 81/08 All. XXXIV",
@@ -347,7 +349,7 @@ def score_posture(pose: dict, assessment_type: str) -> tuple[float, list[Finding
         )
 
     if assessment_type == "LIFT" and knee > 165 and trunk > 45:
-        # Schiena curva a gambe tese: la tecnica di sollevamento e' scorretta.
+        # Schiena curva a gambe tese: la tecnica di sollevamento è scorretta.
         penalty += 12
         findings.append(
             Finding(
@@ -355,13 +357,16 @@ def score_posture(pose: dict, assessment_type: str) -> tuple[float, list[Finding
                 severity="HIGH",
                 title="Sollevamento a schiena curva",
                 detail=(
-                    f"Ginocchia quasi estese ({knee:.0f}gradi) con tronco flesso "
-                    f"a {trunk:.0f}gradi: tecnica 'stoop' anziche' 'squat'."
+                    f"Ginocchia quasi estese ({knee:.0f}°) con tronco flesso "
+                    f"a {trunk:.0f}°: tecnica 'stoop' anziché 'squat'."
                 ),
                 measured=round(knee, 1),
                 threshold=165.0,
                 reference="ISO 11228-1",
-                recommendation="Formazione specifica sulla tecnica di sollevamento (art. 37 D.Lgs 81/08).",
+                recommendation=(
+                    "Formazione specifica sulla tecnica di sollevamento "
+                    "(art. 37 D.Lgs 81/08)."
+                ),
             )
         )
 
@@ -373,7 +378,7 @@ def score_posture(pose: dict, assessment_type: str) -> tuple[float, list[Finding
                 code="GRIP_POOR",
                 severity="WARN",
                 title="Presa inadeguata",
-                detail="Rilevata presa a uncino/pinch anziche' presa di potenza.",
+                detail="Rilevata presa a uncino/pinch anziché presa di potenza.",
                 reference="NIOSH - coupling multiplier",
                 recommendation="Dotare i contenitori di maniglie o adottare ausili di presa.",
             )
@@ -390,11 +395,16 @@ def score_posture(pose: dict, assessment_type: str) -> tuple[float, list[Finding
                     code="FATIGUE_EAR",
                     severity="WARN",
                     title="Indicatori di affaticamento visivo",
-                    detail=f"Eye Aspect Ratio medio {ear_mean:.2f} sotto la soglia di {EAR_FATIGUE_THRESHOLD}.",
+                    detail=(
+                        f"Eye Aspect Ratio medio {ear_mean:.2f} sotto la soglia "
+                        f"di {EAR_FATIGUE_THRESHOLD}."
+                    ),
                     measured=round(float(ear_mean), 3),
                     threshold=EAR_FATIGUE_THRESHOLD,
                     reference="D.Lgs 81/08 art. 175 (pause VDT)",
-                    recommendation="Applicare la pausa di 15 minuti ogni 120 minuti di lavoro al VDT.",
+                    recommendation=(
+                        "Applicare la pausa di 15 minuti ogni 120 minuti di lavoro al VDT."
+                    ),
                 )
             )
         if yawns and yawns >= 2:
@@ -426,7 +436,7 @@ def score_environment(
     max_noise_db: float = MAX_NOISE_DB,
     max_tilt_deg: float = MAX_TILT_DEG,
 ) -> tuple[float, list[Finding]]:
-    """Penalita' 0-100 per non conformita' ambientali e qualita' acquisizione."""
+    """Penalità 0-100 per non conformità ambientali e qualità acquisizione."""
     findings: list[Finding] = []
     penalty = 0.0
 
@@ -470,8 +480,8 @@ def score_environment(
                 severity="INFO",
                 title="Acquisizione poco stabile",
                 detail=(
-                    f"Deviazione media del dispositivo {tilt_deg:.1f}gradi "
-                    f"(limite {max_tilt_deg:.1f}gradi): gli angoli hanno tolleranza maggiore."
+                    f"Deviazione media del dispositivo {tilt_deg:.1f}° "
+                    f"(limite {max_tilt_deg:.1f}°): gli angoli hanno tolleranza maggiore."
                 ),
                 measured=round(tilt_deg, 2),
                 threshold=max_tilt_deg,
@@ -509,9 +519,9 @@ def evaluate(
     """
     Calcola il punteggio complessivo della valutazione.
 
-    Per il sollevamento il punteggio NIOSH domina (peso 65%) ed e' corretto
-    dalla postura; per VDT e movimentazione la componente posturale e'
-    prevalente. Le non conformita' ambientali si sommano come penalita'.
+    Per il sollevamento il punteggio NIOSH domina (peso 65%) ed è corretto
+    dalla postura; per VDT e movimentazione la componente posturale è
+    prevalente. Le non conformità ambientali si sommano come penalita'.
     """
     task_data = task_data or {}
     thresholds = thresholds or {}

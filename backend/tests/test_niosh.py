@@ -42,7 +42,7 @@ def test_asymmetric_multiplier_zero_over_135_deg():
 def test_frequency_multiplier_matches_table():
     # Riga 4 sollevamenti/min, durata 2-8h, V < 75 -> 0.45 da tabella NIOSH.
     assert calc.frequency_multiplier(4, calc.DURATION_LONG, 50) == pytest.approx(0.45)
-    # Oltre 15 sollevamenti al minuto il compito non e' valutabile.
+    # Oltre 15 sollevamenti al minuto il compito non è valutabile.
     assert calc.frequency_multiplier(20, calc.DURATION_SHORT, 50) == 0.0
 
 
@@ -81,10 +81,13 @@ def test_evaluate_lift_flags_niosh_and_posture():
         tilt_deg=1.0,
     )
     codes = {f["code"] for f in result.findings}
-    assert {"NIOSH_LI", "TRUNK_FLEXION", "TRUNK_TWIST", "STOOP_LIFT", "LIGHT_LOW", "NOISE_HIGH"} <= codes
+    expected = {
+        "NIOSH_LI", "TRUNK_FLEXION", "TRUNK_TWIST", "STOOP_LIFT", "LIGHT_LOW", "NOISE_HIGH",
+    }
+    assert expected <= codes
     assert result.level == "RED"
     assert result.lifting_index > 1
-    # Il primo rilievo e' sempre il piu' grave: guida la lettura del PDF.
+    # Il primo rilievo è sempre il più grave: guida la lettura del PDF.
     assert result.findings[0]["severity"] == "CRITICAL"
 
 

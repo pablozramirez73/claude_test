@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 class TelegramWebhookView(APIView):
     """
-    Riceve gli update di Telegram. La richiesta e' autenticata dal token
+    Riceve gli update di Telegram. La richiesta è autenticata dal token
     segreto concordato in setWebhook (header X-Telegram-Bot-Api-Secret-Token).
     """
 

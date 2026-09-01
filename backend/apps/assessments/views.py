@@ -58,7 +58,7 @@ class AssessmentViewSet(
 
     def perform_create(self, serializer):
         assessment = serializer.save()
-        # Il PDF e' pesante: si genera fuori dal ciclo richiesta/risposta.
+        # Il PDF è pesante: si genera fuori dal ciclo richiesta/risposta.
         assessment.status = Assessment.Status.PROCESSING
         assessment.save(update_fields=["status"])
         generate_report_pdf.delay(assessment.pk, send_to_telegram=True)
@@ -105,15 +105,17 @@ class CompanyDashboardView(APIView):
     """
     GET /api/v1/companies/{id}/dashboard/
 
-    Trend del rischio, distribuzione per livello e rilievi piu' frequenti:
-    e' la vista che giustifica l'abbonamento (dato continuo, non spot).
+    Trend del rischio, distribuzione per livello e rilievi più frequenti:
+    è la vista che giustifica l'abbonamento (dato continuo, non spot).
     """
 
     permission_classes = [IsCompanyMember]
 
     def get(self, request, pk):
         if int(pk) != request.user.company_id:
-            return Response({"detail": "Azienda non accessibile."}, status=status.HTTP_403_FORBIDDEN)
+            return Response(
+                {"detail": "Azienda non accessibile."}, status=status.HTTP_403_FORBIDDEN
+            )
 
         company = Company.objects.get(pk=pk)
         days = min(int(request.query_params.get("days", 90)), 365)
@@ -140,7 +142,11 @@ class CompanyDashboardView(APIView):
             for finding in findings or []:
                 entry = finding_counts.setdefault(
                     finding.get("code", "?"),
-                    {"code": finding.get("code", "?"), "title": finding.get("title", ""), "count": 0},
+                    {
+                        "code": finding.get("code", "?"),
+                        "title": finding.get("title", ""),
+                        "count": 0,
+                    },
                 )
                 entry["count"] += 1
         top_findings = sorted(finding_counts.values(), key=lambda f: -f["count"])[:8]

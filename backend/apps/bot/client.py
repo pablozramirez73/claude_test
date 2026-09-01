@@ -63,7 +63,10 @@ def send_document(chat_id: int, filename: str, content: bytes, caption: str = ""
 def answer_web_app_query(query_id: str, result: dict) -> dict:
     import json
 
-    return _call("answerWebAppQuery", data={"web_app_query_id": query_id, "result": json.dumps(result)})
+    return _call(
+        "answerWebAppQuery",
+        data={"web_app_query_id": query_id, "result": json.dumps(result)},
+    )
 
 
 def set_webhook(url: str, secret_token: str = "") -> dict:
