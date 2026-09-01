@@ -26,3 +26,6 @@ frontend_tma/public/mediapipe/*.task
 htmlcov/
 .ruff_cache/
 .DS_Store
+
+# Artefatti di build TypeScript
+*.tsbuildinfo
