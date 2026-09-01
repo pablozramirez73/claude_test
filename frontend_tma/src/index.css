@@ -1,0 +1,673 @@
+/* ErgoCheck - foglio di stile della Mini App.
+   I colori derivano dal tema del client Telegram (variabili impostate da
+   initTelegram) con fallback per l'esecuzione in un browser normale. */
+
+:root {
+  --tg-bg: #ffffff;
+  --tg-text: #111114;
+  --tg-hint: #8a8a8e;
+  --tg-link: #0b6bcb;
+  --tg-button: #0b6bcb;
+  --tg-button-text: #ffffff;
+  --tg-secondary-bg: #f2f2f7;
+
+  --ok: #16a34a;
+  --warn: #ca8a04;
+  --high: #ea580c;
+  --critical: #dc2626;
+
+  --radius: 14px;
+  --gap: 12px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--tg-bg);
+  color: var(--tg-text);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 15px;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1 {
+  font-size: 21px;
+  margin: 0 0 4px;
+}
+
+h2 {
+  font-size: 16px;
+}
+
+a {
+  color: var(--tg-link);
+}
+
+code {
+  background: var(--tg-secondary-bg);
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-size: 13px;
+}
+
+/* ------------------------------------------------------------------ layout */
+
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+  padding: 16px 16px calc(24px + env(safe-area-inset-bottom));
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+.page--capture {
+  padding-top: 0;
+}
+
+.page__header {
+  margin-bottom: 4px;
+}
+
+.section-title {
+  margin: 8px 0 0;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--tg-hint);
+}
+
+.row {
+  display: flex;
+  gap: 8px;
+}
+
+.row > * {
+  flex: 1;
+}
+
+.muted {
+  color: var(--tg-hint);
+  margin: 0;
+}
+
+.small {
+  font-size: 13px;
+}
+
+.center {
+  text-align: center;
+}
+
+.loader,
+.empty {
+  padding: 24px 16px;
+  text-align: center;
+  color: var(--tg-hint);
+}
+
+.alert {
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  font-size: 14px;
+}
+
+.alert--error {
+  background: rgba(220, 38, 38, 0.12);
+  color: var(--critical);
+}
+
+.alert--warn {
+  background: rgba(202, 138, 4, 0.14);
+  color: var(--warn);
+}
+
+/* ------------------------------------------------------------------ pulsanti */
+
+.button {
+  appearance: none;
+  border: none;
+  border-radius: var(--radius);
+  background: var(--tg-button);
+  color: var(--tg-button-text);
+  font-size: 15px;
+  font-weight: 600;
+  padding: 13px 16px;
+  cursor: pointer;
+}
+
+.button:disabled {
+  opacity: 0.5;
+}
+
+.button--ghost {
+  background: var(--tg-secondary-bg);
+  color: var(--tg-text);
+}
+
+/* -------------------------------------------------------------------- card */
+
+.cards {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-align: left;
+  border: none;
+  border-radius: var(--radius);
+  background: var(--tg-secondary-bg);
+  padding: 14px;
+  cursor: pointer;
+  color: inherit;
+}
+
+.card:disabled {
+  opacity: 0.45;
+}
+
+.card__icon {
+  font-size: 26px;
+}
+
+.card__body {
+  display: flex;
+  flex-direction: column;
+}
+
+.card__title {
+  font-weight: 600;
+}
+
+.card__description {
+  font-size: 13px;
+  color: var(--tg-hint);
+}
+
+/* ------------------------------------------------------------------ camera */
+
+.camera {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  background: #000;
+  border-radius: 0 0 var(--radius) var(--radius);
+  overflow: hidden;
+}
+
+.camera__video,
+.pose-overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.camera__message {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 12px;
+  background: rgba(0, 0, 0, 0.62);
+  color: #fff;
+  font-size: 13px;
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.camera__message--error {
+  background: rgba(220, 38, 38, 0.85);
+}
+
+.camera__progress {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.camera__progress-bar {
+  height: 100%;
+  background: var(--ok);
+  transition: width 120ms linear;
+}
+
+.camera__badges {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  right: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.badge {
+  font-size: 12px;
+  font-weight: 600;
+  color: #fff;
+  border-radius: 999px;
+  padding: 4px 10px;
+  background: rgba(0, 0, 0, 0.55);
+}
+
+.badge--ok {
+  background: var(--ok);
+}
+
+.badge--warn {
+  background: var(--warn);
+}
+
+.badge--high {
+  background: var(--critical);
+}
+
+.camera__angles {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-around;
+  padding: 8px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: #fff;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.65));
+}
+
+/* ------------------------------------------------------------ prerequisiti */
+
+.gate {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.gate__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--tg-secondary-bg);
+  border-radius: 10px;
+  padding: 10px 12px;
+  border-left: 3px solid transparent;
+}
+
+.gate__item--ok {
+  border-left-color: var(--ok);
+}
+
+.gate__item--warn {
+  border-left-color: var(--warn);
+}
+
+.gate__item--blocked {
+  border-left-color: var(--critical);
+}
+
+.gate__item--pending {
+  border-left-color: var(--tg-hint);
+}
+
+.gate__icon {
+  width: 18px;
+  text-align: center;
+  font-weight: 700;
+}
+
+.gate__body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.gate__label {
+  font-weight: 500;
+}
+
+.gate__hint {
+  font-size: 12px;
+  color: var(--tg-hint);
+}
+
+.gate__value {
+  font-variant-numeric: tabular-nums;
+  font-size: 13px;
+  color: var(--tg-hint);
+}
+
+/* -------------------------------------------------------------------- form */
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--tg-hint);
+}
+
+.field input,
+.field select {
+  font-size: 16px; /* sotto i 16px iOS ingrandisce la pagina al focus */
+  color: var(--tg-text);
+  background: var(--tg-secondary-bg);
+  border: 1px solid transparent;
+  border-radius: 10px;
+  padding: 11px 12px;
+}
+
+.field input:focus,
+.field select:focus {
+  outline: none;
+  border-color: var(--tg-button);
+}
+
+.field small {
+  font-size: 12px;
+}
+
+/* -------------------------------------------------------------------- esito */
+
+.gauge {
+  margin: 8px auto 0;
+  text-align: center;
+  position: relative;
+}
+
+.gauge__value {
+  font-size: 40px;
+  font-weight: 700;
+  line-height: 1;
+  margin-top: -18px;
+  font-variant-numeric: tabular-nums;
+}
+
+.gauge__max {
+  font-size: 15px;
+  color: var(--tg-hint);
+  font-weight: 500;
+}
+
+.gauge__label {
+  font-weight: 600;
+  margin-top: 4px;
+}
+
+.stats {
+  display: flex;
+  gap: 8px;
+}
+
+.stat {
+  flex: 1;
+  background: var(--tg-secondary-bg);
+  border-radius: var(--radius);
+  padding: 12px;
+  text-align: center;
+}
+
+.stat__value {
+  display: block;
+  font-size: 20px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.stat__label {
+  font-size: 12px;
+  color: var(--tg-hint);
+}
+
+.findings {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.finding {
+  background: var(--tg-secondary-bg);
+  border-radius: var(--radius);
+  padding: 12px;
+  border-left: 3px solid var(--tg-hint);
+}
+
+.finding--critical {
+  border-left-color: var(--critical);
+}
+
+.finding--high {
+  border-left-color: var(--high);
+}
+
+.finding--warn {
+  border-left-color: var(--warn);
+}
+
+.finding__head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.finding__severity {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--tg-hint);
+}
+
+.finding__title {
+  font-size: 15px;
+  margin: 0;
+}
+
+.finding__detail,
+.finding__action {
+  margin: 6px 0 0;
+  font-size: 13px;
+}
+
+.finding__ref {
+  margin: 6px 0 0;
+  font-size: 11px;
+  color: var(--tg-hint);
+}
+
+.report-status {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* --------------------------------------------------------------- dashboard */
+
+.chips {
+  display: flex;
+  gap: 6px;
+}
+
+.chip {
+  border: none;
+  border-radius: 999px;
+  background: var(--tg-secondary-bg);
+  color: var(--tg-text);
+  padding: 6px 12px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.chip--active {
+  background: var(--tg-button);
+  color: var(--tg-button-text);
+}
+
+.chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 140px;
+  padding: 8px;
+  background: var(--tg-secondary-bg);
+  border-radius: var(--radius);
+}
+
+.chart__col {
+  flex: 1;
+  height: 100%;
+  display: flex;
+  align-items: flex-end;
+}
+
+.chart__bar {
+  width: 100%;
+  border-radius: 3px 3px 0 0;
+  min-height: 2px;
+}
+
+.legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-size: 13px;
+}
+
+.legend li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.legend__dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.ranking {
+  margin: 0;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 14px;
+}
+
+.ranking li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+/* ----------------------------------------------------------------- storico */
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.list__row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: none;
+  background: var(--tg-secondary-bg);
+  border-radius: var(--radius);
+  padding: 12px;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.list__dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex: none;
+}
+
+.list__body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.list__score {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ------------------------------------------------------------------- piani */
+
+.plans {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.plan {
+  background: var(--tg-secondary-bg);
+  border-radius: var(--radius);
+  padding: 14px;
+  border: 1px solid transparent;
+}
+
+.plan--current {
+  border-color: var(--tg-button);
+}
+
+.plan h2 {
+  margin: 0;
+}
+
+.plan__price {
+  font-size: 24px;
+  font-weight: 700;
+  margin: 4px 0;
+}
+
+.plan__features {
+  margin: 8px 0 12px;
+  padding-left: 18px;
+  font-size: 13px;
+}
+
+.plan__badge {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--tg-button);
+}
