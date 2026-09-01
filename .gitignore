@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# Django
+*.sqlite3
+backend/media/
+backend/staticfiles/
+.env
+.env.local
+
+# Node
+node_modules/
+dist/
+.vite/
+
+# Modelli MediaPipe (scaricati da script, non versionati)
+frontend_tma/public/mediapipe/*.task
+
+# Tooling
+.pytest_cache/
+.coverage
+htmlcov/
+.ruff_cache/
+.DS_Store

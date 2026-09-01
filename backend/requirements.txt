@@ -1,0 +1,30 @@
+# --- core ---------------------------------------------------------------
+Django==5.0.6
+djangorestframework==3.15.1
+django-filter==24.2
+django-cors-headers==4.3.1
+django-environ==0.11.2
+psycopg[binary]==3.1.19
+whitenoise==6.6.0
+
+# --- realtime & code asincrono ------------------------------------------
+channels==4.1.0
+channels-redis==4.2.0
+daphne==4.1.2
+celery==5.4.0
+redis==5.0.4
+
+# --- storage & report ----------------------------------------------------
+django-storages==1.14.3
+boto3==1.34.106
+reportlab==4.2.0
+Pillow==10.3.0
+
+# --- telegram & pagamenti ------------------------------------------------
+python-telegram-bot==21.1.1
+requests==2.32.2
+stripe==9.7.0
+
+# --- runtime -------------------------------------------------------------
+gunicorn==22.0.0
+uvicorn[standard]==0.29.0
