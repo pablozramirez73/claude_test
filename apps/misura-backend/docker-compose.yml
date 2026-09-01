@@ -1,0 +1,72 @@
+# Run the MISURA backend (Django + PostgreSQL) locally in Docker.
+#
+#   docker compose up backend        # gunicorn, closer to prod → http://localhost:8099
+#   docker compose up backend-dev    # manage.py runserver, hot reload → http://localhost:8098
+#
+# Host ports are overridable (e.g. if the defaults below are also taken)
+# without editing this file — copy .env.example to .env next to this file
+# and adjust, or pass inline:
+#
+#   BACKEND_PORT=9010 POSTGRES_PORT=5443 docker compose up backend
+#
+# POSTGRES_PORT only matters if you want to reach the database directly
+# from the host (psql, a GUI client, etc.) — the backend always talks to
+# `db` over the internal Docker network regardless of that mapping.
+#
+# The values after `:-` below (e.g. `insecure-dev-key-change-me`) are
+# intentionally-fake dev-only placeholders, not real credentials — see
+# .env.example and apps/misura-backend/README.md.
+x-backend-env: &backend-env
+  POSTGRES_DB: ${POSTGRES_DB:-misura}
+  POSTGRES_USER: ${POSTGRES_USER:-misura}
+  POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-misura}
+  POSTGRES_HOST: db
+  DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:-insecure-dev-key-change-me}
+  DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-localhost,127.0.0.1}
+  DJANGO_CORS_ALLOWED_ORIGINS: ${DJANGO_CORS_ALLOWED_ORIGINS:-http://localhost:8091,http://localhost:5183}
+  PROFILE_HASH_SALT: ${PROFILE_HASH_SALT:-misura-dev-salt-change-me}
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-misura}
+      POSTGRES_USER: ${POSTGRES_USER:-misura}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-misura}
+    ports:
+      - "${POSTGRES_PORT:-5442}:5432"
+    volumes:
+      - misura_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-misura}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build: .
+    environment:
+      <<: *backend-env
+      DJANGO_DEBUG: ${DJANGO_DEBUG:-false}
+    ports:
+      - "${BACKEND_PORT:-8099}:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  backend-dev:
+    build: .
+    command: ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+    environment:
+      <<: *backend-env
+      DJANGO_DEBUG: "true"
+    ports:
+      - "${BACKEND_DEV_PORT:-8098}:8000"
+    volumes:
+      - .:/app
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  misura_postgres_data:

@@ -2,8 +2,12 @@ import { useEffect, useState } from "react";
 import { buildShareLink, getTelegramUserId, loadProfileFromCloud } from "../telegram/webapp";
 import { useScan } from "../state/ScanContext";
 
-// Placeholder — a real deployment injects the shop's own bot username at build time.
-const BOT_USERNAME = "misura_demo_bot";
+// The shop's bot username, used only to build the public t.me share deep
+// link (never a secret — unlike the bot token, which lives server-side only
+// and must never appear in this frontend or in version control).
+// Override per-deployment with VITE_TELEGRAM_BOT_USERNAME (see .env.example)
+// instead of editing this file.
+const BOT_USERNAME = import.meta.env.VITE_TELEGRAM_BOT_USERNAME || "thpsh_bot";
 
 export function ProfileScreen() {
   const { state, dispatch } = useScan();

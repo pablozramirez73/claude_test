@@ -1,0 +1,12 @@
+version: 2
+secret:
+  # These paths hold documented, intentionally-fake dev-only placeholder
+  # values (DJANGO_SECRET_KEY, POSTGRES_PASSWORD, PROFILE_HASH_SALT — see
+  # each file's own comments), never real credentials. Flagged by GitGuardian
+  # purely on variable-name pattern (SECRET_KEY=, PASSWORD=), not on any
+  # actual leaked secret — see apps/misura-backend/README.md and
+  # docs/PRD-misura.md §10 for how real secrets (the Telegram bot token) are
+  # actually handled: never committed, read from an untracked .env at
+  # runtime.
+  ignored-paths:
+    - "**/.env.example"

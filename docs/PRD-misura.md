@@ -78,9 +78,13 @@ per estrarre misure antropometriche reali.
 ## 8. Stack Tecnico MVP
 
 - Frontend: TypeScript, `@mediapipe/tasks-vision`, Three.js, `@react-three/fiber`
-- Backend: Node.js + Telegraf.js (solo per salvataggio profili anonimizzati) —
-  `apps/misura-bot`
-- Hosting: Cloudflare Pages / Vercel (per WASM veloce)
+- Backend: Django + Django REST Framework + PostgreSQL (storage profili
+  anonimizzati) — `apps/misura-backend`. Scelta pragmatica per l'uso locale
+  via Docker; l'idea originale Node.js + Telegraf.js resta valida per un
+  eventuale processo bot separato (webhook/polling), non ancora implementato.
+- Hosting: Cloudflare Pages / Vercel (per WASM veloce) per il frontend;
+  il backend Django è pensato per girare in container Docker propri (vedi
+  `apps/misura-backend/docker-compose.yml`).
 - Permessi richiesti: camera, accelerometer, gyroscope, xr-spatial-tracking
 
 ## 9. Fallback per device senza LiDAR
@@ -117,7 +121,16 @@ espliciti e commentati dove serve hardware non simulabile qui:
 - Integrazione Telegram WebApp SDK reale (theme, `MainButton`, `HapticFeedback`,
   `CloudStorage`, deep link) quando la mini app gira dentro Telegram; degrada a tab
   browser normale in sviluppo locale.
+- Backend reale (`apps/misura-backend`): API Django/DRF + PostgreSQL, containerizzata
+  (`docker-compose.yml` con migration automatiche all'avvio), che salva/legge/cancella
+  profili con l'id Telegram sempre hashato lato server prima di essere scritto su DB
+  (mai in chiaro — vedi `profiles/hashing.py`) e con misure validate in un range
+  plausibile. Coperta da test (`profiles/tests.py`). **Non ancora collegata al
+  frontend**: oggi il salvataggio profilo passa solo da Telegram CloudStorage
+  lato client; questa API è pronta per essere richiamata quando si vorrà anche
+  uno storage server-side.
 - **Fuori scope in questo POC** (richiedono hardware/infra non testabile qui, ma sono
   disegnati nell'architettura sopra): accesso diretto ad ARKit Depth API nativo (solo
-  WebXR Depth Sensing lato web), backend di produzione multi-tenant, pagamenti
-  Telegram Stars/TON, "Armadio Misure" multi-brand.
+  WebXR Depth Sensing lato web), il vero e proprio processo bot Telegram
+  (webhook/polling sul token), pagamenti Telegram Stars/TON, "Armadio Misure"
+  multi-brand.
