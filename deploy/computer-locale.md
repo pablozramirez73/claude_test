@@ -213,13 +213,23 @@ Nei log del connettore devi vedere alcune righe `Registered tunnel
 connection` (di norma quattro, verso datacenter diversi) e nella dashboard
 il tunnel deve risultare **HEALTHY**.
 
-Se il tunnel è HEALTHY ma il dominio non risponde come dovrebbe:
+Se il tunnel è HEALTHY ma il dominio non risponde come dovrebbe, la prima
+cosa da stabilire è **se la richiesta arriva ai container**:
+
+```bash
+curl -s https://ergo.syntaxnode.work/healthz/ >/dev/null
+docker compose logs --tail=20 tma
+```
+
+Se nei log di nginx non compare la richiesta, sta rispondendo qualcos'altro
+prima del tunnel e le voci qui sotto dicono cosa.
 
 | Sintomo | Causa quasi sempre |
 | --- | --- |
 | **1033** o «Tunnel not found» | hostname pubblico non configurato, o record DNS che punta altrove |
 | **502 Bad Gateway** | `Type` impostato su HTTPS invece di HTTP, oppure il container `tma` non è partito (`docker compose ps`) |
 | **404 su tutto** | `URL` sbagliato nell'hostname pubblico: deve essere `tma:80` |
+| Risponde **«hello world»** o una pagina di prova Cloudflare | `Type` impostato su *Hello World*, il servizio di prova incorporato in cloudflared: la richiesta non arriva mai ai container. Oppure un Worker con una route su quell'hostname, che ha la precedenza sul tunnel |
 | La Mini App si apre ma le chiamate falliscono | `ALLOWED_HOSTS` in `backend/.env` non contiene `ergo.syntaxnode.work` |
 
 Apri poi `https://ergo.syntaxnode.work` in un browser: deve comparire la
