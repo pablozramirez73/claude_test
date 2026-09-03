@@ -85,13 +85,29 @@ TELEGRAM_BOT_TOKEN=<token di @BotFather>
 
 ## 3. Il tunnel
 
+Tre parole che la dashboard usa in modo diverso da come suonano:
+
+| Termine | Cos'è | Dove si vede |
+| --- | --- | --- |
+| **Tunnel** | l'oggetto a cui dai un nome | Zero Trust → Networks → Tunnels |
+| **Connettore** (*connector*) | un'istanza di `cloudflared` agganciata al tunnel — qui, il container omonimo | righe dentro il tunnel, con id, versione e stato |
+| **Token** | dice al connettore a quale tunnel agganciarsi | nel comando di installazione del tunnel |
+
+Non esiste una voce di menu chiamata «connettore»: si apre il **tunnel** e
+si prende il token dal comando che la dashboard mostra.
+
 Dalla dashboard, **Zero Trust → Networks → Tunnels → Create a tunnel →
 Cloudflared**:
 
 1. Nome `ergocheck`, poi **Save**.
-2. Nella schermata di installazione copia il **token** (la stringa lunga
-   dentro il comando mostrato). Non installare cloudflared a mano: lo
-   esegue un container.
+2. Nella schermata di installazione copia il **token**: nel comando
+   mostrato (`cloudflared service install eyJhIjoi…`) è la stringa che
+   segue `install`, o `--token` se il comando la riporta così. Solo
+   quella, senza il resto della riga. Non installare cloudflared a mano:
+   lo esegue un container.
+
+   Se hai già chiuso quella schermata, si ritrova cliccando sul tunnel e
+   poi su **Configure**.
 3. **Public Hostname → Add a public hostname**, uno solo:
 
    | Campo | Valore |
