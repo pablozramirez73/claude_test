@@ -79,7 +79,7 @@ In `backend/.env` compila almeno:
 ```
 DJANGO_SECRET_KEY=<python3 -c "import secrets;print(secrets.token_urlsafe(64))">
 DEBUG=False
-ALLOWED_HOSTS=ergo.syntaxnode.work
+ALLOWED_HOSTS=ergo.syntaxnode.work,localhost,127.0.0.1
 CSRF_TRUSTED_ORIGINS=https://ergo.syntaxnode.work
 TMA_URL=https://ergo.syntaxnode.work
 TELEGRAM_BOT_TOKEN=<token di @BotFather>
@@ -313,6 +313,7 @@ ergo.syntaxnode.work {
 }
 ```
 | La Mini App si apre ma le chiamate falliscono | `ALLOWED_HOSTS` in `backend/.env` non contiene `ergo.syntaxnode.work` |
+| **400** su ogni rotta, con corpo di 154 byte | è `DisallowedHost`: l'Host della richiesta non è in `ALLOWED_HOSTS`. Capita tipicamente provando da `127.0.0.1:5190`, che va elencato anche lui |
 
 Apri poi `https://ergo.syntaxnode.work` in un browser: deve comparire la
 schermata di registrazione dell'azienda. Fuori da Telegram non c'è
