@@ -147,15 +147,33 @@ STORAGES = {
 MEDIA_URL = "media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
-if env("USE_S3"):
+# Storage dei report: qualsiasi servizio compatibile S3. Con
+# R2_ACCOUNT_ID impostato si configura Cloudflare R2, che parla S3 e non
+# fa pagare il traffico in uscita.
+R2_ACCOUNT_ID = env("R2_ACCOUNT_ID", default="")
+
+if env("USE_S3") or R2_ACCOUNT_ID:
     AWS_ACCESS_KEY_ID = env("AWS_ACCESS_KEY_ID")
     AWS_SECRET_ACCESS_KEY = env("AWS_SECRET_ACCESS_KEY")
     AWS_STORAGE_BUCKET_NAME = env("AWS_STORAGE_BUCKET_NAME")
-    AWS_S3_REGION_NAME = env("AWS_S3_REGION_NAME", default="eu-south-1")
-    AWS_S3_ENDPOINT_URL = env("AWS_S3_ENDPOINT_URL", default=None)
-    AWS_DEFAULT_ACL = None
+    AWS_DEFAULT_ACL = None  # R2 non supporta le ACL per oggetto
     AWS_QUERYSTRING_EXPIRE = 3600  # link firmati validi 1h
     AWS_S3_FILE_OVERWRITE = False
+
+    if R2_ACCOUNT_ID:
+        # R2 espone un solo endpoint globale e vuole la firma v4 con
+        # regione "auto": la regione di AWS qui non esiste.
+        AWS_S3_ENDPOINT_URL = f"https://{R2_ACCOUNT_ID}.r2.cloudflarestorage.com"
+        AWS_S3_REGION_NAME = "auto"
+        AWS_S3_SIGNATURE_VERSION = "s3v4"
+        # Con un dominio pubblico collegato al bucket i PDF si servono da
+        # lì; senza, restano privati e raggiungibili solo via link firmato.
+        AWS_S3_CUSTOM_DOMAIN = env("R2_PUBLIC_DOMAIN", default=None)
+        AWS_QUERYSTRING_AUTH = not AWS_S3_CUSTOM_DOMAIN
+    else:
+        AWS_S3_REGION_NAME = env("AWS_S3_REGION_NAME", default="eu-south-1")
+        AWS_S3_ENDPOINT_URL = env("AWS_S3_ENDPOINT_URL", default=None)
+
     STORAGES["default"] = {"BACKEND": "storages.backends.s3boto3.S3Boto3Storage"}
 
 # -------------------------------------------------------------- DRF / sicurezza

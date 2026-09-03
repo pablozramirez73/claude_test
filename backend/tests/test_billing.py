@@ -58,3 +58,30 @@ def test_plans_endpoint_is_public(client):
     assert response.status_code == 200
     codes = {p["code"] for p in response.json()}
     assert codes == {"FREE", "PRO", "AGENCY"}
+
+
+def test_r2_configuration_is_derived_from_the_account_id(monkeypatch):
+    """
+    Impostare R2_ACCOUNT_ID deve bastare: endpoint, regione e versione di
+    firma di Cloudflare R2 non coincidono con quelli di AWS S3.
+    """
+    import importlib
+    import os
+
+    monkeypatch.setitem(os.environ, "R2_ACCOUNT_ID", "abc123")
+    monkeypatch.setitem(os.environ, "AWS_ACCESS_KEY_ID", "key")
+    monkeypatch.setitem(os.environ, "AWS_SECRET_ACCESS_KEY", "secret")
+    monkeypatch.setitem(os.environ, "AWS_STORAGE_BUCKET_NAME", "ergocheck-reports")
+
+    settings_module = importlib.import_module("config.settings")
+    reloaded = importlib.reload(settings_module)
+
+    assert reloaded.AWS_S3_ENDPOINT_URL == "https://abc123.r2.cloudflarestorage.com"
+    assert reloaded.AWS_S3_REGION_NAME == "auto"
+    assert reloaded.AWS_S3_SIGNATURE_VERSION == "s3v4"
+    assert reloaded.AWS_DEFAULT_ACL is None
+    assert reloaded.STORAGES["default"]["BACKEND"] == (
+        "storages.backends.s3boto3.S3Boto3Storage"
+    )
+    # Senza dominio pubblico i PDF restano privati, dietro link firmato.
+    assert reloaded.AWS_QUERYSTRING_AUTH is True

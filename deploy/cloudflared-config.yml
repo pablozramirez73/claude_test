@@ -1,0 +1,28 @@
+# Cloudflare Tunnel per l'API: alternativa al record A + Origin Certificate.
+#
+# Il VPS apre una connessione in uscita verso Cloudflare, quindi la 443 in
+# ingresso resta chiusa e il server funziona anche dietro NAT o IP dinamico.
+# Non serve alcun certificato di origine: il TLS lo termina Cloudflare.
+#
+# Installazione:
+#   cloudflared tunnel login
+#   cloudflared tunnel create ergocheck-api
+#   cloudflared tunnel route dns ergocheck-api api.syntaxnode.work
+#   sudo cp cloudflared-config.yml /etc/cloudflared/config.yml
+#   sudo cloudflared service install
+#
+# Sostituisci <TUNNEL_ID> con l'id restituito da `tunnel create`.
+
+tunnel: <TUNNEL_ID>
+credentials-file: /etc/cloudflared/<TUNNEL_ID>.json
+
+ingress:
+  - hostname: api.syntaxnode.work
+    service: http://127.0.0.1:8000
+    originRequest:
+      # Il canale WebSocket degli aggiornamenti di stato del report resta
+      # aperto a lungo: senza questi valori il tunnel lo chiuderebbe.
+      connectTimeout: 30s
+      noTLSVerify: false
+      httpHostHeader: api.syntaxnode.work
+  - service: http_status:404

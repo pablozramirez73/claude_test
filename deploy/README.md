@@ -130,7 +130,46 @@ curl https://api.syntaxnode.work/healthz/
 # -> {"status": "ok", "service": "ergocheck"}
 ```
 
-## 4. Bot Telegram
+## 4. Cosa si puo' e non si puo' delegare a Cloudflare
+
+| Componente | Su Cloudflare? | Nota |
+| --- | --- | --- |
+| Mini App (statica) | **Sì**, Pages | l'inferenza MediaPipe gira nel browser |
+| Report PDF | **Sì**, R2 | compatibile S3, nessun costo di egress |
+| CDN, TLS, WAF, DDoS | **Sì** | record proxied davanti all'API |
+| Accesso all'origine | **Sì**, Tunnel | vedi `cloudflared-config.yml` |
+| PostgreSQL | No | Cloudflare non offre Postgres gestito |
+| Redis | No | Workers KV non è Redis: nessun protocollo, consistenza eventuale |
+| Django, Celery | No | Workers esegue JavaScript, non processi Python long-running |
+
+D1 è SQLite (tetto di 10 GB, accessibile solo dai Workers) e Hyperdrive non
+è un database: fa pooling e caching verso un Postgres che ospiti altrove, e
+solo dai Workers. Nessuno dei due può stare dietro l'ORM di Django su un VPS.
+Postgres e Redis restano quindi sul VPS, o su un servizio gestito
+(Neon, Supabase, Upstash) raggiunto dal VPS.
+
+### Report su R2
+
+```bash
+# Dashboard: R2 → Create bucket → ergocheck-reports (regione automatica)
+# Poi R2 → Manage API tokens → Create token (Object Read & Write sul bucket)
+```
+
+Nel `.env` di produzione basta:
+
+```
+R2_ACCOUNT_ID=<account id di Cloudflare>
+AWS_ACCESS_KEY_ID=<access key id del token R2>
+AWS_SECRET_ACCESS_KEY=<secret access key del token R2>
+AWS_STORAGE_BUCKET_NAME=ergocheck-reports
+```
+
+Endpoint, regione `auto` e firma `s3v4` vengono derivati da
+`R2_ACCOUNT_ID`. Senza `R2_PUBLIC_DOMAIN` il bucket resta privato e i PDF
+si servono con link firmati validi un'ora — che è la scelta giusta per
+documenti che contengono valutazioni di postazioni di lavoro.
+
+## 5. Bot Telegram
 
 Su [@BotFather](https://t.me/BotFather):
 
@@ -147,7 +186,7 @@ manage.py set_webhook https://api.syntaxnode.work/api/v1/bot/webhook/
 Infine aggiungi il bot al gruppo aziendale e invia `/collega` per registrarlo
 come destinatario dei report.
 
-## 5. Da controllare dopo il primo deploy
+## 6. Da controllare dopo il primo deploy
 
 - [ ] `https://syntaxnode.work` apre la Mini App dentro Telegram
 - [ ] `curl https://api.syntaxnode.work/healthz/` risponde 200
@@ -156,3 +195,5 @@ come destinatario dei report.
 - [ ] Camera, microfono e sensori chiedono il permesso (richiedono https)
 - [ ] Una valutazione di prova produce il PDF e lo recapita nel gruppo
 - [ ] Il firewall del VPS accetta la 443 solo dai range di Cloudflare
+      (oppure la 443 è chiusa del tutto e si usa Cloudflare Tunnel)
+- [ ] Se si usa R2: il PDF di prova compare nel bucket e il link firmato apre
