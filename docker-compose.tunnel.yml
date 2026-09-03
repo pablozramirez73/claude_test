@@ -1,0 +1,29 @@
+# Override per pubblicare l'API da un computer personale tramite
+# Cloudflare Tunnel, senza aprire porte sul router.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.tunnel.yml \
+#     up -d db redis api worker beat bot cloudflared
+#
+# La Mini App sta su Cloudflare Pages, quindi il servizio `tma` del compose
+# principale qui non serve: non elencarlo fra i servizi da avviare.
+
+services:
+  api:
+    # Solo loopback: l'API non viene esposta sulla rete locale. Chi la
+    # raggiunge da fuori passa dal tunnel, che entra sulla rete di compose.
+    #
+    # `!override` e' necessario: nel merge dei file compose le liste di
+    # porte si sommano, quindi senza di esso resterebbe attiva anche la
+    # pubblicazione su 0.0.0.0 del file principale.
+    ports: !override
+      - "127.0.0.1:8000:8000"
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    # Tunnel gestito da remoto: nessun certificato o file di credenziali sul
+    # disco, la configurazione sta nella dashboard. Il token va in un file
+    # .env accanto a questo compose (CLOUDFLARE_TUNNEL_TOKEN=...).
+    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN:?serve CLOUDFLARE_TUNNEL_TOKEN}
+    depends_on:
+      - api

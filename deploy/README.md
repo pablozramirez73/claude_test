@@ -94,6 +94,10 @@ Al termine, revoca il token se era temporaneo: *My Profile → API Tokens*.
 
 ## 3. API sul VPS
 
+Se l'origine è un computer personale invece di un server, il percorso più
+corto è Docker + tunnel: vedi [`computer-locale.md`](computer-locale.md).
+Quanto segue vale per un VPS.
+
 Due modi di pubblicare l'API, alternativi fra loro:
 
 - **Cloudflare Tunnel** (consigliato): nessuna porta aperta, nessun
