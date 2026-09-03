@@ -17,8 +17,9 @@ node_modules/
 dist/
 .vite/
 
-# Modelli MediaPipe (scaricati da script, non versionati)
+# Asset MediaPipe (preparati da `npm run fetch:models`, non versionati)
 frontend_tma/public/mediapipe/*.task
+frontend_tma/public/mediapipe/wasm/
 
 # Tooling
 .pytest_cache/
@@ -29,3 +30,5 @@ htmlcov/
 
 # Artefatti di build TypeScript
 *.tsbuildinfo
+*.sqlite3-wal
+*.sqlite3-shm

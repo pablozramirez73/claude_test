@@ -8,6 +8,7 @@ from datetime import timedelta
 from pathlib import Path
 
 import environ
+from corsheaders.defaults import default_headers
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -178,6 +179,10 @@ REST_FRAMEWORK = {
 
 CORS_ALLOWED_ORIGINS = env("CORS_ALLOWED_ORIGINS")
 CORS_ALLOW_CREDENTIALS = False
+# La Mini App e' servita da un'origine diversa dall'API e autentica ogni
+# richiesta con l'header di initData: senza questa voce il preflight lo
+# rifiuta e nessuna chiamata dal browser arriva a destinazione.
+CORS_ALLOW_HEADERS = (*default_headers, "x-telegram-init-data")
 CSRF_TRUSTED_ORIGINS = env("CSRF_TRUSTED_ORIGINS", list, default=[])
 
 SECURE_CONTENT_TYPE_NOSNIFF = True

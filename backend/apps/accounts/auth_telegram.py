@@ -17,7 +17,7 @@ import hashlib
 import hmac
 import json
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from urllib.parse import parse_qsl
 
 from django.conf import settings
@@ -114,6 +114,13 @@ def verify_init_data(
     )
 
 
+# Ogni richiesta della Mini App passa da qui: aggiornare `last_seen_at` a
+# ogni chiamata metterebbe una scrittura sul percorso critico di tutte le
+# letture. Si tocca il database solo se il profilo e' cambiato davvero o se
+# l'ultimo accesso registrato e' piu' vecchio di questa soglia.
+LAST_SEEN_REFRESH = timedelta(minutes=15)
+
+
 def upsert_user_from_init_data(data: TelegramInitData):
     """Crea o aggiorna il TelegramUser corrispondente al payload verificato."""
     from django.utils import timezone
@@ -121,16 +128,30 @@ def upsert_user_from_init_data(data: TelegramInitData):
     from .models import TelegramUser
 
     profile = data.user
-    defaults = {
+    fields = {
         "username": (profile.get("username") or "")[:64],
         "first_name": (profile.get("first_name") or "")[:120],
         "last_name": (profile.get("last_name") or "")[:120],
         "language_code": (profile.get("language_code") or "it")[:8],
         "photo_url": profile.get("photo_url") or "",
         "is_premium": bool(profile.get("is_premium", False)),
-        "last_seen_at": timezone.now(),
     }
-    user, _created = TelegramUser.objects.update_or_create(
-        telegram_id=data.telegram_id, defaults=defaults
-    )
+
+    now = timezone.now()
+    user = TelegramUser.objects.filter(telegram_id=data.telegram_id).first()
+    if user is None:
+        return TelegramUser.objects.create_user(
+            telegram_id=data.telegram_id, last_seen_at=now, **fields
+        )
+
+    changed = [name for name, value in fields.items() if getattr(user, name) != value]
+    for name in changed:
+        setattr(user, name, fields[name])
+
+    if user.last_seen_at is None or now - user.last_seen_at > LAST_SEEN_REFRESH:
+        user.last_seen_at = now
+        changed.append("last_seen_at")
+
+    if changed:
+        user.save(update_fields=changed)
     return user

@@ -1,0 +1,22 @@
+[Unit]
+Description=ErgoCheck bot Telegram (long polling)
+After=network.target ergocheck-api.service
+Wants=ergocheck-api.service
+
+[Service]
+Type=simple
+User=ergocheck
+Group=ergocheck
+WorkingDirectory=/srv/ergocheck/backend
+EnvironmentFile=/srv/ergocheck/backend/.env
+# Alternativa al polling: disabilita questa unit e registra il webhook con
+# `manage.py set_webhook https://api.syntaxnode.work/api/v1/bot/webhook/`.
+ExecStart=/srv/ergocheck/venv/bin/python manage.py run_bot
+Restart=always
+RestartSec=10
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+
+[Install]
+WantedBy=multi-user.target

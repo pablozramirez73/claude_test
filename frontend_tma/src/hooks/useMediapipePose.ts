@@ -34,6 +34,9 @@ const HAND_MODEL = import.meta.env.VITE_HAND_MODEL_URL ?? '/mediapipe/hand_landm
 
 export type CaptureStatus = 'idle' | 'loading' | 'ready' | 'running' | 'done' | 'error';
 
+/** Oltre questo tempo senza un solo frame analizzato l'acquisizione si arrende. */
+const WARMUP_TIMEOUT_MS = 20_000;
+
 export interface LiveState {
   angles: PoseAngles | null;
   warnings: LiveWarning[];
@@ -82,7 +85,12 @@ export function useMediapipePose({
   const handRef = useRef<HandLandmarkerType | null>(null);
 
   const rafRef = useRef<number | null>(null);
+  // 0 = acquisizione avviata ma nessun frame ancora analizzato. La prima
+  // chiamata a detectForVideo compila le shader sulla GPU e blocca per
+  // qualche secondo: far partire il cronometro dal click brucerebbe quel
+  // tempo, lasciando all'operatore molto meno dei 15 s dichiarati.
   const startedAtRef = useRef(0);
+  const launchedAtRef = useRef(0);
   const lastVideoTimeRef = useRef(-1);
   const frameCountRef = useRef(0);
   const fatigueRef = useRef(new FatigueTracker());
@@ -162,7 +170,8 @@ export function useMediapipePose({
 
   const collect = useCallback((): PoseData => {
     const accumulators = accumulatorsRef.current;
-    const elapsedSeconds = (performance.now() - startedAtRef.current) / 1000;
+    const elapsedSeconds =
+      startedAtRef.current === 0 ? 0 : (performance.now() - startedAtRef.current) / 1000;
 
     const grips = gripCountsRef.current;
     const dominantGrip = Object.entries(grips).sort((a, b) => b[1] - a[1])[0]?.[0];
@@ -203,6 +212,7 @@ export function useMediapipePose({
     gripCountsRef.current = {};
     confidenceRef.current = { sum: 0, count: 0 };
     frameCountRef.current = 0;
+    startedAtRef.current = 0;
     lastVideoTimeRef.current = -1;
     lastWarningRef.current = '';
     setLive(EMPTY_LIVE);
@@ -227,7 +237,7 @@ export function useMediapipePose({
     }
 
     const now = performance.now();
-    const elapsed = now - startedAtRef.current;
+    let elapsed = startedAtRef.current === 0 ? 0 : now - startedAtRef.current;
 
     // detectForVideo va chiamato una sola volta per frame sorgente.
     if (video.currentTime !== lastVideoTimeRef.current) {
@@ -281,6 +291,11 @@ export function useMediapipePose({
         }
       }
 
+      // Il cronometro parte qui: il primo frame analizzato e' il momento in
+      // cui l'analisi e' davvero operativa.
+      if (startedAtRef.current === 0) startedAtRef.current = performance.now();
+      elapsed = performance.now() - startedAtRef.current;
+
       setLive({
         angles,
         warnings,
@@ -290,7 +305,16 @@ export function useMediapipePose({
       });
     }
 
-    if (elapsed >= durationMs) {
+    if (startedAtRef.current === 0 && now - launchedAtRef.current > WARMUP_TIMEOUT_MS) {
+      stop();
+      setStatus('error');
+      setError(
+        'Nessun frame analizzabile: verifica che la camera inquadri la scena e riprova.',
+      );
+      return;
+    }
+
+    if (startedAtRef.current !== 0 && elapsed >= durationMs) {
       stop();
       setStatus('done');
       onComplete?.(collect(), elapsed / 1000);
@@ -303,7 +327,8 @@ export function useMediapipePose({
   const start = useCallback(() => {
     if (!poseRef.current) return;
     reset();
-    startedAtRef.current = performance.now();
+    setError(null);
+    launchedAtRef.current = performance.now();
     setStatus('running');
     rafRef.current = requestAnimationFrame(tick);
   }, [reset, tick]);

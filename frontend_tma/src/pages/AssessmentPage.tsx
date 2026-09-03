@@ -62,6 +62,18 @@ export function AssessmentPage() {
 
   const submit = useCallback(
     async (poseData: PoseData, elapsedSeconds: number) => {
+      // Se nessun frame ha prodotto angoli il soggetto non era inquadrato:
+      // inutile inviare al server una valutazione che rifiuterebbe.
+      if (!poseData.samples) {
+        haptic.error();
+        setSubmitError(
+          'Nessuna postura rilevata: inquadra il lavoratore per intero (spalle, ' +
+            'bacino e ginocchia visibili) e ripeti la scansione.',
+        );
+        setPhase('setup');
+        return;
+      }
+
       setPhase('sending');
       setMainButtonBusy(true);
       try {
@@ -119,11 +131,15 @@ export function AssessmentPage() {
   }, []);
 
   // Senza sensore di luce dedicato si stima l'illuminamento dal video.
+  // Le dipendenze sono i due valori stabili del hook: usare l'oggetto intero
+  // ricreerebbe l'intervallo a ogni render, e con un render al secondo non
+  // scatterebbe mai.
+  const { fromSensor: lightFromSensor, sampleFromVideo } = light;
   useEffect(() => {
-    if (light.fromSensor) return undefined;
-    const timer = window.setInterval(() => light.sampleFromVideo(videoRef.current), 1000);
+    if (lightFromSensor) return undefined;
+    const timer = window.setInterval(() => sampleFromVideo(videoRef.current), 1000);
     return () => window.clearInterval(timer);
-  }, [light]);
+  }, [lightFromSensor, sampleFromVideo]);
 
   const checks: Check[] = [
     {
@@ -188,6 +204,7 @@ export function AssessmentPage() {
         return;
       }
       haptic.tap('medium');
+      setSubmitError(null);
       setPhase('capture');
       pose.start();
     });
@@ -203,7 +220,9 @@ export function AssessmentPage() {
 
       {phase === 'setup' && (
         <>
-          {submitError && <div className="alert alert--error">{submitError}</div>}
+          {(submitError || pose.error) && (
+            <div className="alert alert--error">{submitError ?? pose.error}</div>
+          )}
 
           <SensorGate checks={checks} />
 

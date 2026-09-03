@@ -88,6 +88,14 @@ ex art. 28, non come suo sostituto.
 
 ---
 
+## Deploy
+
+La Mini App è pubblicata su **Cloudflare Pages** (`syntaxnode.work`) e l'API
+su un VPS dietro Cloudflare (`api.syntaxnode.work`): Pages serve solo file
+statici, mentre Django, Celery, PostgreSQL e Redis richiedono un server.
+Configurazioni pronte, unit systemd, reverse proxy e checklist in
+[`deploy/README.md`](deploy/README.md).
+
 ## Avvio rapido
 
 ### Con Docker
@@ -102,7 +110,7 @@ Espone l'API su `:8000` e la Mini App su `:5173`.
 ### In locale
 
 ```bash
-make install          # dipendenze backend + Mini App + modelli MediaPipe
+make install          # dipendenze backend + Mini App + asset MediaPipe
 make migrate
 make run              # API ASGI su :8000
 make worker           # worker Celery in un altro terminale
@@ -111,6 +119,20 @@ make tma-dev          # Mini App su :5173
 ```
 
 Servono PostgreSQL e Redis in ascolto (o si usano i servizi del compose).
+
+### Senza PostgreSQL e Redis
+
+Per una prova rapida con le sole dipendenze Python esiste
+`config.settings_dev`: SQLite, cache e channel layer in memoria, task Celery
+eseguiti in linea.
+
+```bash
+cd backend
+export DJANGO_SETTINGS_MODULE=config.settings_dev
+python manage.py migrate
+python manage.py sqlite_wal        # una volta sola: journal WAL sul file
+python -m uvicorn config.asgi:application --port 8000
+```
 
 ### Configurare il bot
 

@@ -1,0 +1,20 @@
+# Header applicati da Cloudflare Pages.
+# Documentazione: https://developers.cloudflare.com/pages/configuration/headers/
+
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(self), microphone=(self), accelerometer=(self), gyroscope=(self), ambient-light-sensor=(self)
+  Cross-Origin-Opener-Policy: same-origin
+  # `credentialless` e non `require-corp`: abilita SharedArrayBuffer (thread
+  # WASM di MediaPipe) senza pretendere l'header CORP dai terzi, altrimenti
+  # telegram-web-app.js verrebbe bloccato e la Mini App non partirebbe.
+  Cross-Origin-Embedder-Policy: credentialless
+
+# Modelli e runtime WASM sono immutabili: cache lunga.
+/mediapipe/*
+  Cache-Control: public, max-age=31536000, immutable
+  Cross-Origin-Resource-Policy: same-origin
+
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable

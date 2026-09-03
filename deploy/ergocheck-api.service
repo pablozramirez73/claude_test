@@ -1,0 +1,22 @@
+[Unit]
+Description=ErgoCheck API (ASGI)
+After=network.target postgresql.service redis-server.service
+Wants=postgresql.service redis-server.service
+
+[Service]
+Type=simple
+User=ergocheck
+Group=ergocheck
+WorkingDirectory=/srv/ergocheck/backend
+EnvironmentFile=/srv/ergocheck/backend/.env
+# ASGI e non WSGI: serve per le WebSocket di stato del report.
+ExecStart=/srv/ergocheck/venv/bin/daphne -b 127.0.0.1 -p 8000 config.asgi:application
+Restart=always
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ReadWritePaths=/srv/ergocheck/media
+
+[Install]
+WantedBy=multi-user.target

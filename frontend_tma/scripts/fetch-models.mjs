@@ -1,11 +1,14 @@
 /**
- * Scarica i modelli MediaPipe in public/mediapipe/.
- * I .task non sono versionati (vedi .gitignore): vanno scaricati in fase di
- * build o di setup, cosi' l'app li serve dalla propria origine senza
- * dipendere da una CDN esterna a runtime.
+ * Prepara gli asset MediaPipe in public/mediapipe/.
+ *
+ * Scarica i modelli .task e copia il runtime WASM da node_modules. Nessuno
+ * dei due e' versionato (vedi .gitignore): l'app li serve dalla propria
+ * origine, cosi' a runtime non dipende da una CDN esterna - che sarebbe un
+ * punto di rottura in cantiere e un problema con gli header di isolamento
+ * cross-origin richiesti dai thread WASM.
  */
 import { createWriteStream } from 'node:fs';
-import { mkdir, stat } from 'node:fs/promises';
+import { cp, mkdir, stat } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Readable } from 'node:stream';
@@ -49,4 +52,17 @@ for (const model of MODELS) {
   await pipeline(Readable.fromWeb(response.body), createWriteStream(target));
 }
 
-console.log('Modelli pronti in public/mediapipe/');
+// Il runtime WASM viaggia dentro il pacchetto npm: si copia, non si scarica.
+const WASM_SRC = join(ROOT, 'node_modules', '@mediapipe', 'tasks-vision', 'wasm');
+const WASM_OUT = join(OUT_DIR, 'wasm');
+try {
+  await stat(WASM_SRC);
+  await cp(WASM_SRC, WASM_OUT, { recursive: true });
+  console.log('> runtime wasm copiato da node_modules');
+} catch {
+  console.warn(
+    'ATTENZIONE: runtime wasm non trovato in node_modules. Esegui prima `npm install`.',
+  );
+}
+
+console.log('Asset pronti in public/mediapipe/');

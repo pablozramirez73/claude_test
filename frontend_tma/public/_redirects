@@ -1,0 +1,3 @@
+# La Mini App usa il routing per hash, quindi tutti i percorsi servono
+# index.html; questa regola copre gli accessi diretti a un sottopercorso.
+/*  /index.html  200

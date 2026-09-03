@@ -5,6 +5,7 @@ from datetime import timedelta
 import pytest
 
 from apps.accounts.auth_telegram import (
+    LAST_SEEN_REFRESH,
     InitDataError,
     upsert_user_from_init_data,
     verify_init_data,
@@ -72,3 +73,52 @@ def test_api_accepts_signed_request(api, user):
     assert response.status_code == 200
     assert response.json()["telegram_id"] == user.telegram_id
     assert response.json()["company"]["vat"] == "IT01234567890"
+
+
+@pytest.mark.django_db
+def test_cors_preflight_allows_the_init_data_header(client, settings):
+    """
+    La Mini App gira su un'origine diversa dall'API: se il preflight non
+    dichiara l'header di initData, il browser blocca ogni chiamata.
+    """
+    settings.CORS_ALLOWED_ORIGINS = ["https://ergocheck.example.com"]
+    response = client.options(
+        "/api/v1/me/",
+        HTTP_ORIGIN="https://ergocheck.example.com",
+        HTTP_ACCESS_CONTROL_REQUEST_METHOD="GET",
+        HTTP_ACCESS_CONTROL_REQUEST_HEADERS="x-telegram-init-data",
+    )
+    assert response.status_code == 200
+    allowed = response.headers["access-control-allow-headers"].lower()
+    assert "x-telegram-init-data" in allowed
+
+
+@pytest.mark.django_db
+def test_repeated_requests_do_not_write_on_every_call(django_assert_num_queries, user):
+    """
+    L'autenticazione sta sul percorso di ogni richiesta: se il profilo non
+    cambia e last_seen_at e' fresco, non deve partire nessuna scrittura.
+    """
+    from django.utils import timezone
+
+    raw = build_init_data(user.telegram_id, username=user.username, first_name=user.first_name)
+    upsert_user_from_init_data(verify_init_data(raw, TOKEN))
+
+    user.refresh_from_db()
+    assert user.last_seen_at is not None
+
+    # Seconda chiamata identica: una sola SELECT, nessun UPDATE.
+    with django_assert_num_queries(1):
+        upsert_user_from_init_data(verify_init_data(raw, TOKEN))
+
+    # Un profilo cambiato viene invece salvato.
+    renamed = build_init_data(user.telegram_id, username="nuovo_nick", first_name=user.first_name)
+    refreshed = upsert_user_from_init_data(verify_init_data(renamed, TOKEN))
+    assert refreshed.username == "nuovo_nick"
+
+    # E last_seen_at si aggiorna quando e' piu' vecchio della soglia.
+    stale = timezone.now() - LAST_SEEN_REFRESH * 2
+    type(user).objects.filter(pk=user.pk).update(last_seen_at=stale)
+    upsert_user_from_init_data(verify_init_data(renamed, TOKEN))
+    user.refresh_from_db()
+    assert user.last_seen_at > stale
