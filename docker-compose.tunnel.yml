@@ -4,6 +4,10 @@
 #   docker compose -f docker-compose.yml -f docker-compose.tunnel.yml \
 #     up -d --build
 #
+# Impostando COMPOSE_FILE nel .env di radice (vedi .env.example) basta
+# `docker compose up -d --build`: l'override viene incluso da solo, e non
+# si rischia di avviare lo stack dimenticando il connettore.
+#
 # Mini App e API stanno sulla stessa origine: il tunnel ha un solo hostname
 # pubblico, `syntaxnode.work` -> `tma:80`, e nginx dentro il container `tma`
 # smista /api/ e /ws/ verso `ergo-api:7000`.

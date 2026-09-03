@@ -155,7 +155,23 @@ file sono in `.gitignore`.
 ## 4. Avvio
 
 ```bash
+docker compose up -d --build
+```
+
+Il `.env` copiato al passo 2 contiene `COMPOSE_FILE`, quindi l'override del
+tunnel viene incluso da solo. Senza quella riga servirebbe passarlo ogni
+volta a mano:
+
+```bash
 docker compose -f docker-compose.yml -f docker-compose.tunnel.yml up -d --build
+```
+
+ed è un errore che non si nota: lo stack parte regolarmente, ma senza il
+connettore, e il dominio resta irraggiungibile. Per verificare che il
+container ci sia:
+
+```bash
+docker compose ps cloudflared
 ```
 
 Il primo build scarica i modelli MediaPipe (circa 17 MB) dentro l'immagine
@@ -332,7 +348,7 @@ docker compose exec db pg_dump -U ergocheck ergocheck > backup.sql
 Dopo un `git pull`:
 
 ```bash
-docker compose -f docker-compose.yml -f docker-compose.tunnel.yml up -d --build
+docker compose up -d --build
 ```
 
 Le modifiche alla Mini App richiedono la ricostruzione dell'immagine `tma`:
