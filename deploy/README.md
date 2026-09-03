@@ -28,10 +28,14 @@ Redis richiedono il VPS.
 | Tipo | Nome | Contenuto | Proxy |
 | --- | --- | --- | --- |
 | CNAME | `syntaxnode.work` | `<progetto>.pages.dev` | Proxied |
-| A | `api` | `<IP del VPS>` | Proxied |
+| CNAME | `api` | `<UUID>.cfargotunnel.com` | Proxied |
 
-Il record radice lo crea Cloudflare stesso quando si aggiunge il dominio
-personalizzato al progetto Pages. Modalità SSL/TLS: **Full (strict)**.
+Nessuno dei due record va creato a mano: il primo lo aggiunge Cloudflare
+quando colleghi il dominio personalizzato al progetto Pages, il secondo lo
+crea `cloudflared tunnel route dns`. Con il percorso alternativo senza
+tunnel, `api` diventa un record **A** verso l'IP del VPS.
+
+Modalità SSL/TLS: **Full (strict)**.
 
 ## 2. Frontend su Cloudflare Pages
 
@@ -90,6 +94,14 @@ Al termine, revoca il token se era temporaneo: *My Profile → API Tokens*.
 
 ## 3. API sul VPS
 
+Due modi di pubblicare l'API, alternativi fra loro:
+
+- **Cloudflare Tunnel** (consigliato): nessuna porta aperta, nessun
+  certificato di origine da gestire, funziona dietro NAT. Procedura in
+  [`tunnel.md`](tunnel.md).
+- **Record A + Origin Certificate**: `nginx-api.conf` con i range di
+  Cloudflare, descritto qui sotto.
+
 ```bash
 # utente e struttura
 sudo adduser --system --group --home /srv/ergocheck ergocheck
@@ -116,6 +128,7 @@ sudo cp deploy/ergocheck-*.service /etc/systemd/system/
 sudo systemctl daemon-reload
 sudo systemctl enable --now ergocheck-api ergocheck-worker ergocheck-beat ergocheck-bot
 
+# Solo per il percorso con record A. Con il Tunnel salta questo blocco:
 # TLS di origine: Cloudflare → SSL/TLS → Origin Server → Create Certificate
 sudo mkdir -p /etc/ssl/cloudflare   # syntaxnode.work.pem + .key, chmod 600
 sudo cp deploy/nginx-api.conf /etc/nginx/sites-available/ergocheck-api
@@ -137,7 +150,7 @@ curl https://api.syntaxnode.work/healthz/
 | Mini App (statica) | **Sì**, Pages | l'inferenza MediaPipe gira nel browser |
 | Report PDF | **Sì**, R2 | compatibile S3, nessun costo di egress |
 | CDN, TLS, WAF, DDoS | **Sì** | record proxied davanti all'API |
-| Accesso all'origine | **Sì**, Tunnel | vedi `cloudflared-config.yml` |
+| Accesso all'origine | **Sì**, Tunnel | runbook in [`tunnel.md`](tunnel.md) |
 | PostgreSQL | No | Cloudflare non offre Postgres gestito |
 | Redis | No | Workers KV non è Redis: nessun protocollo, consistenza eventuale |
 | Django, Celery | No | Workers esegue JavaScript, non processi Python long-running |

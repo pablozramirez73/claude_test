@@ -17,6 +17,8 @@ tunnel: <TUNNEL_ID>
 credentials-file: /etc/cloudflared/<TUNNEL_ID>.json
 
 ingress:
+  # Con i report su R2 si punta direttamente a daphne; se restano su disco
+  # metti nginx davanti (nginx-api-tunnel.conf) e usa http://127.0.0.1:8080.
   - hostname: api.syntaxnode.work
     service: http://127.0.0.1:8000
     originRequest:
