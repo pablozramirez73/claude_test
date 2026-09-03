@@ -52,9 +52,21 @@ Su Windows lavora dentro **WSL2**, con il repository nel filesystem Linux
 
 ## 2. Configurazione
 
+Il progetto usa **due file `.env`**, con ruoli diversi:
+
+| File | Chi lo legge | Cosa contiene |
+| --- | --- | --- |
+| `backend/.env` | Django, dentro i container | chiave segreta, token del bot, domini, Stripe, R2 |
+| `.env` (radice) | Docker Compose | solo il token del tunnel |
+
+Sono separati perche' compose interpreta il simbolo `$` nei valori del file
+di radice: una password che lo contiene verrebbe alterata. Il file passato
+ai container (`backend/.env`) non subisce invece alcuna interpretazione.
+
 ```bash
 git clone <repo> ergocheck && cd ergocheck
 cp deploy/env.production.example backend/.env
+cp .env.example .env
 ```
 
 In `backend/.env` compila almeno:
@@ -92,14 +104,15 @@ Cloudflared**:
    `tma` è il nome del servizio nella rete di compose: il connettore lo
    raggiunge direttamente, senza passare dalle porte pubblicate sull'host.
 
-Metti il token in un file `.env` nella radice del repository — quello letto
-da compose, diverso da `backend/.env`:
+Incolla il token nel `.env` della radice, quello copiato prima:
 
-```bash
-echo "CLOUDFLARE_TUNNEL_TOKEN=<token>" > .env
+```
+CLOUDFLARE_TUNNEL_TOKEN=<token>
 ```
 
-È già in `.gitignore`.
+Attenzione a non metterlo in `backend/.env`: lì compose non lo cercherebbe
+e l'avvio si fermerebbe con `serve CLOUDFLARE_TUNNEL_TOKEN`. Entrambi i
+file sono in `.gitignore`.
 
 ## 4. Avvio
 
