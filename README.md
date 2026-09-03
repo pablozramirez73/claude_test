@@ -90,11 +90,16 @@ ex art. 28, non come suo sostituto.
 
 ## Deploy
 
-La Mini App è pubblicata su **Cloudflare Pages** (`syntaxnode.work`) e l'API
-su un VPS dietro Cloudflare (`api.syntaxnode.work`): Pages serve solo file
-statici, mentre Django, Celery, PostgreSQL e Redis richiedono un server.
-Configurazioni pronte, unit systemd, reverse proxy e checklist in
-[`deploy/README.md`](deploy/README.md).
+Due topologie, entrambe documentate in [`deploy/`](deploy/README.md):
+
+- **Tutto su una macchina**, anche un computer personale: un solo container
+  nginx serve la Mini App e inoltra `/api/` e `/ws/` al backend, e
+  Cloudflare Tunnel lo pubblica su un unico hostname. Mini App e API sulla
+  stessa origine, nessuna porta aperta sul router.
+  Vedi [`deploy/computer-locale.md`](deploy/computer-locale.md).
+- **Distribuita**: Mini App su Cloudflare Pages, API su un VPS dietro
+  Cloudflare. Pages serve solo file statici, mentre Django, Celery,
+  PostgreSQL e Redis richiedono un server.
 
 ## Avvio rapido
 

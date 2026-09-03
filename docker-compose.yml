@@ -73,12 +73,15 @@ services:
     depends_on:
       - ergo-api
 
+  # Punto d'ingresso unico: serve la Mini App compilata e inoltra /api/,
+  # /ws/, /admin/, /static/ e /media/ al backend.
   tma:
     build: ./frontend_tma
     ports:
       - "5190:80"
     depends_on:
       - ergo-api
+    restart: unless-stopped
 
 volumes:
   pgdata:

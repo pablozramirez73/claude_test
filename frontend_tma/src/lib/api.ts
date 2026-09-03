@@ -118,11 +118,27 @@ export const api = {
 };
 
 /**
+ * Quando l'API e' servita dalla stessa origine della Mini App il canale
+ * WebSocket si ricava dall'indirizzo corrente: non serve configurarlo, e
+ * resta corretto qualunque sia il dominio su cui gira l'app.
+ * `new WebSocket()` non accetta URL relativi, da qui la costruzione.
+ */
+function defaultWsUrl(): string {
+  if (typeof window === 'undefined') return '';
+  if (import.meta.env.VITE_API_URL && /^https?:\/\//.test(import.meta.env.VITE_API_URL)) {
+    // L'API sta su un'altra origine: senza VITE_WS_URL non si puo' indovinare.
+    return '';
+  }
+  const schema = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  return `${schema}//${window.location.host}/ws/assessments/`;
+}
+
+/**
  * Canale WebSocket per gli aggiornamenti di stato del report.
  * Restituisce la funzione di chiusura.
  */
 export function subscribeAssessments(onUpdate: (data: Assessment) => void): () => void {
-  const wsBase = import.meta.env.VITE_WS_URL;
+  const wsBase = import.meta.env.VITE_WS_URL || defaultWsUrl();
   if (!wsBase) return () => undefined;
 
   const socket = new WebSocket(`${wsBase}?initData=${encodeURIComponent(getInitData())}`);
