@@ -114,11 +114,28 @@ Cloudflared**:
    | --- | --- |
    | Subdomain | *(vuoto)* |
    | Domain | `syntaxnode.work` |
+   | Path | *(vuoto)* |
    | Type | `HTTP` |
    | URL | `tma:80` |
 
-   `tma` è il nome del servizio nella rete di compose: il connettore lo
-   raggiunge direttamente, senza passare dalle porte pubblicate sull'host.
+   Tre punti in cui è facile sbagliare:
+
+   - **`Type` è `HTTP`, non `HTTPS`.** nginx dentro il container ascolta in
+     chiaro sulla 80; il TLS lo termina Cloudflare. Scegliendo HTTPS il
+     tunnel tenta una connessione cifrata verso un servizio che non la
+     parla, e la risposta è 502.
+   - **`URL` è `tma:80`**, il nome del servizio nella rete di compose, non
+     `localhost:5190`: il connettore gira nello stesso network e raggiunge
+     il container direttamente. `localhost`, per lui, è il proprio
+     container. (Se invece avessi installato cloudflared sull'host e non
+     come container, lì sarebbe `localhost:5190`.)
+   - Il **record DNS lo crea Cloudflare** al salvataggio. Se sul dominio
+     esiste già un record per la radice — per esempio da un tentativo
+     precedente con Pages — il salvataggio viene rifiutato: cancella
+     quel record da **DNS → Records** e riprova.
+
+   Finché non aggiungi l'hostname pubblico il tunnel risulta connesso ma
+   non instrada nulla: è normale che `syntaxnode.work` non risponda.
 
 Incolla il token nel `.env` della radice, quello copiato prima:
 
@@ -187,7 +204,18 @@ curl -I https://syntaxnode.work/
 docker compose logs cloudflared | tail -20
 ```
 
-Nella dashboard il tunnel deve risultare **HEALTHY**.
+Nei log del connettore devi vedere alcune righe `Registered tunnel
+connection` (di norma quattro, verso datacenter diversi) e nella dashboard
+il tunnel deve risultare **HEALTHY**.
+
+Se il tunnel è HEALTHY ma il dominio non risponde come dovrebbe:
+
+| Sintomo | Causa quasi sempre |
+| --- | --- |
+| **1033** o «Tunnel not found» | hostname pubblico non configurato, o record DNS che punta altrove |
+| **502 Bad Gateway** | `Type` impostato su HTTPS invece di HTTP, oppure il container `tma` non è partito (`docker compose ps`) |
+| **404 su tutto** | `URL` sbagliato nell'hostname pubblico: deve essere `tma:80` |
+| La Mini App si apre ma le chiamate falliscono | `ALLOWED_HOSTS` in `backend/.env` non contiene `syntaxnode.work` |
 
 Apri poi `https://syntaxnode.work` in un browser: deve comparire la
 schermata di registrazione dell'azienda. Fuori da Telegram non c'è
