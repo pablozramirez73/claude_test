@@ -53,14 +53,40 @@ d'ambiente della build stanno in `frontend_tma/.env.production`.
 non `require-corp`, che bloccherebbe `telegram-web-app.js` (non manda l'header
 CORP) impedendo l'avvio della Mini App.
 
-Deploy manuale, in alternativa al collegamento del repository:
+### Deploy manuale con wrangler
+
+`wrangler` e' una devDependency del progetto, quindi non serve installarlo a
+mano. Il token va passato tramite ambiente e non salvato in un file del
+repository.
 
 ```bash
 cd frontend_tma
-export CLOUDFLARE_API_TOKEN=...      # permesso "Cloudflare Pages: Edit"
-export CLOUDFLARE_ACCOUNT_ID=...
-npm run deploy
+npm install
+export CLOUDFLARE_API_TOKEN=...          # permesso "Cloudflare Pages: Edit"
+export CLOUDFLARE_ACCOUNT_ID=...         # opzionale con un token a un solo account
+
+npx wrangler whoami                      # verifica token e account
+npx wrangler pages project create ergocheck --production-branch main   # solo la prima volta
+npm run deploy                           # build:prod + pages deploy dist
 ```
+
+Il primo deploy pubblica su `https://ergocheck.pages.dev`. Il dominio
+personalizzato **non** si aggiunge da wrangler (nessun comando `pages domain`
+nella v4): va fatto dalla dashboard, in *Workers & Pages → ergocheck →
+Custom domains → Set up a custom domain*, indicando `syntaxnode.work`.
+Cloudflare crea da se' il record DNS necessario.
+
+In alternativa, via API:
+
+```bash
+curl -X POST \
+  "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/ergocheck/domains" \
+  -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+  -H "Content-Type: application/json" \
+  --data '{"name":"syntaxnode.work"}'
+```
+
+Al termine, revoca il token se era temporaneo: *My Profile → API Tokens*.
 
 ## 3. API sul VPS
 
