@@ -19,7 +19,7 @@ services:
       interval: 5s
       retries: 10
 
-  api:
+  ergo-api:
     build: ./backend
     env_file: ./backend/.env
     environment:
@@ -27,9 +27,9 @@ services:
       REDIS_URL: redis://redis:6379/0
     command: >
       sh -c "python manage.py migrate &&
-             daphne -b 0.0.0.0 -p 8000 config.asgi:application"
+             daphne -b 0.0.0.0 -p 8040 config.asgi:application"
     ports:
-      - "8000:8000"
+      - "8040:8040"
     volumes:
       - media:/app/media
     depends_on:
@@ -48,7 +48,7 @@ services:
     volumes:
       - media:/app/media
     depends_on:
-      - api
+      - ergo-api
 
   beat:
     build: ./backend
@@ -58,7 +58,7 @@ services:
       REDIS_URL: redis://redis:6379/0
     command: celery -A config beat -l info
     depends_on:
-      - api
+      - ergo-api
 
   bot:
     build: ./backend
@@ -68,14 +68,14 @@ services:
       REDIS_URL: redis://redis:6379/0
     command: python manage.py run_bot
     depends_on:
-      - api
+      - ergo-api
 
   tma:
     build: ./frontend_tma
     ports:
       - "5173:80"
     depends_on:
-      - api
+      - ergo-api
 
 volumes:
   pgdata:

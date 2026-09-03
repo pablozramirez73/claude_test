@@ -73,10 +73,12 @@ Cloudflared**:
    | Subdomain | `api` |
    | Domain | `syntaxnode.work` |
    | Type | `HTTP` |
-   | URL | `api:8000` |
+   | URL | `ergo-api:8040` |
 
-   `api:8000` è il nome del servizio nella rete di compose: il container
-   cloudflared lo risolve da solo, senza passare dall'host.
+   `ergo-api` è il nome del servizio nella rete di compose e `8040` la
+   porta su cui ascolta daphne: il container cloudflared lo risolve da
+   solo, senza passare dall'host e senza che la porta sia pubblicata verso
+   l'esterno.
 
 Metti il token in un file `.env` nella radice del repository — quello letto
 da compose, diverso da `backend/.env`:
@@ -91,7 +93,7 @@ echo "CLOUDFLARE_TUNNEL_TOKEN=<token>" > .env
 
 ```bash
 docker compose -f docker-compose.yml -f docker-compose.tunnel.yml \
-  up -d --build db redis api worker beat bot cloudflared
+  up -d --build db redis ergo-api worker beat bot cloudflared
 ```
 
 Il servizio `tma` non va avviato: la Mini App sta su Cloudflare Pages.
@@ -99,14 +101,14 @@ Il servizio `tma` non va avviato: la Mini App sta su Cloudflare Pages.
 Crea l'utente amministratore:
 
 ```bash
-docker compose exec api python manage.py createsuperuser
+docker compose exec ergo-api python manage.py createsuperuser
 ```
 
 ## 5. Verifica
 
 ```bash
-# 1. l'API risponde in locale
-curl http://127.0.0.1:8000/healthz/
+# 1. l'API risponde in locale (pubblicata solo su loopback)
+curl http://127.0.0.1:8040/healthz/
 
 # 2. e attraverso il tunnel
 curl https://api.syntaxnode.work/healthz/
@@ -140,8 +142,8 @@ il sistema sospende comunque.
 ## Gestione quotidiana
 
 ```bash
-docker compose logs -f api                 # log dell'API
-docker compose restart api                 # riavvio dopo modifiche a .env
+docker compose logs -f ergo-api            # log dell'API
+docker compose restart ergo-api            # riavvio dopo modifiche a .env
 docker compose down                        # ferma tutto (i dati restano)
 docker compose exec db pg_dump -U ergocheck ergocheck > backup.sql
 ```
@@ -150,5 +152,5 @@ Dopo un `git pull`:
 
 ```bash
 docker compose -f docker-compose.yml -f docker-compose.tunnel.yml \
-  up -d --build api worker beat bot
+  up -d --build ergo-api worker beat bot
 ```

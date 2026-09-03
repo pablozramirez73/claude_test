@@ -105,7 +105,8 @@ cp backend/.env.example backend/.env      # inserisci TELEGRAM_BOT_TOKEN
 docker compose up --build
 ```
 
-Espone l'API su `:8000` e la Mini App su `:5173`.
+Espone l'API su `:8040` (servizio `ergo-api`) e la Mini App su `:5173`.
+Fuori da compose — `make run`, systemd sul VPS — daphne resta sulla 8000.
 
 ### In locale
 
