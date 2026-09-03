@@ -13,7 +13,9 @@ os.environ.setdefault("DEBUG", "True")
 os.environ.setdefault("DATABASE_URL", "sqlite:///dev.sqlite3")
 os.environ.setdefault("TELEGRAM_BOT_TOKEN", "123456:DEV-TOKEN")
 os.environ.setdefault("ALLOWED_HOSTS", "localhost,127.0.0.1,0.0.0.0")
-os.environ.setdefault("CORS_ALLOWED_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173")
+os.environ.setdefault(
+    "CORS_ALLOWED_ORIGINS", "http://localhost:5190,http://127.0.0.1:5190"
+)
 
 from .settings import *  # noqa: F403,E402
 

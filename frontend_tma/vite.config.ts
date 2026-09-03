@@ -8,7 +8,7 @@ export default defineConfig({
     alias: { '@': path.resolve(__dirname, 'src') },
   },
   server: {
-    port: 5173,
+    port: 5190,
     // Telegram carica la Mini App solo via https: in sviluppo si usa un
     // tunnel (ngrok/cloudflared) che punta a questa porta.
     host: true,

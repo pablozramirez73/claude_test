@@ -105,8 +105,7 @@ cp backend/.env.example backend/.env      # inserisci TELEGRAM_BOT_TOKEN
 docker compose up --build
 ```
 
-Espone l'API sulla `:8040` dell'host (servizio `ergo-api`, daphne ascolta
-sulla `:7000` nel container) e la Mini App su `:5173`.
+Espone l'API su `:7000` (servizio `ergo-api`) e la Mini App su `:5190`.
 
 ### In locale
 
@@ -116,7 +115,7 @@ make migrate
 make run              # API ASGI su :7000
 make worker           # worker Celery in un altro terminale
 make bot              # bot in polling
-make tma-dev          # Mini App su :5173
+make tma-dev          # Mini App su :5190
 ```
 
 Servono PostgreSQL e Redis in ascolto (o si usano i servizi del compose).

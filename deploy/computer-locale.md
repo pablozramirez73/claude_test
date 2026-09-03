@@ -75,10 +75,9 @@ Cloudflared**:
    | Type | `HTTP` |
    | URL | `ergo-api:7000` |
 
-   Attenzione al numero: **7000 è la porta dentro il container**, quella su
-   cui ascolta daphne. Il connettore vive sulla stessa rete di compose e
-   parla direttamente al container, quindi non passa dalla porta pubblicata
-   sull'host (la 8040) e non c'è bisogno che quest'ultima esista.
+   Il connettore vive sulla stessa rete di compose e parla direttamente al
+   container: non passa dalla porta pubblicata sull'host, che serve solo
+   per interrogare l'API dal tuo computer.
 
 Metti il token in un file `.env` nella radice del repository — quello letto
 da compose, diverso da `backend/.env`:
@@ -107,9 +106,8 @@ docker compose exec ergo-api python manage.py createsuperuser
 ## 5. Verifica
 
 ```bash
-# 1. l'API risponde in locale: 8040 sull'host mappata sulla 7000 del
-#    container, pubblicata solo su loopback
-curl http://127.0.0.1:8040/healthz/
+# 1. l'API risponde in locale (pubblicata solo su loopback)
+curl http://127.0.0.1:7000/healthz/
 
 # 2. e attraverso il tunnel
 curl https://api.syntaxnode.work/healthz/
