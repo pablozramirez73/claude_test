@@ -230,6 +230,50 @@ prima del tunnel e le voci qui sotto dicono cosa.
 | **502 Bad Gateway** | `Type` impostato su HTTPS invece di HTTP, oppure il container `tma` non è partito (`docker compose ps`) |
 | **404 su tutto** | `URL` sbagliato nell'hostname pubblico: deve essere `tma:80` |
 | Risponde **«hello world»** o una pagina di prova Cloudflare | `Type` impostato su *Hello World*, il servizio di prova incorporato in cloudflared: la richiesta non arriva mai ai container. Oppure un Worker con una route su quell'hostname, che ha la precedenza sul tunnel |
+| Risponde la **pagina di un altro server** (Caddy, Apache, nginx di sistema) | il connettore sta raggiungendo un servizio dell'host invece del container: vedi sotto |
+| Le risposte **cambiano a ogni richiesta** | più connettori agganciati allo stesso tunnel, e Cloudflare distribuisce fra loro |
+
+### Il connettore raggiunge il server sbagliato
+
+Il valore di `URL` nell'hostname pubblico va letto **dal punto di vista di
+chi esegue cloudflared**, e cambia a seconda di dove gira:
+
+| cloudflared gira… | `URL` corretto | Perché |
+| --- | --- | --- |
+| come container (`docker-compose.tunnel.yml`) | `tma:80` | sta nella rete di compose e risolve i servizi per nome; `localhost` per lui è sé stesso |
+| installato sull'host | `localhost:5190` | deve passare dalla porta pubblicata del container |
+
+Se sull'host gira già un altro web server sulla porta 80 — Caddy, Apache,
+nginx di sistema — e l'`URL` è `localhost:80`, il tunnel finisce lì. È il
+caso in cui compare la pagina di benvenuto di quel server.
+
+Verifica dove sta il connettore:
+
+```bash
+docker compose ps cloudflared          # come container
+systemctl status cloudflared           # come servizio di sistema (Linux)
+brew services list | grep cloudflared  # macOS
+```
+
+**Se rispondono entrambi**, hai due connettori sullo stesso tunnel e le
+richieste si dividono fra loro: le risposte cambiano da una chiamata
+all'altra. Ferma quello che non ti serve:
+
+```bash
+sudo cloudflared service uninstall     # rimuove quello installato sull'host
+```
+
+Nella dashboard, dentro il tunnel, l'elenco dei connettori deve mostrarne
+uno solo.
+
+Se invece vuoi tenere Caddy come porta d'ingresso dell'host, lascia
+`URL` a `localhost:80` e fai inoltrare Caddy al container:
+
+```caddyfile
+ergo.syntaxnode.work {
+    reverse_proxy 127.0.0.1:5190
+}
+```
 | La Mini App si apre ma le chiamate falliscono | `ALLOWED_HOSTS` in `backend/.env` non contiene `ergo.syntaxnode.work` |
 
 Apri poi `https://ergo.syntaxnode.work` in un browser: deve comparire la
