@@ -18,9 +18,9 @@ COPY . .
 
 RUN python manage.py collectstatic --noinput || true
 
-# Porta di default dell'immagine. Il compose la sovrascrive con 8040,
-# dove il container e' raggiungibile come `ergo-api` dal tunnel.
-EXPOSE 8000
+# Il container e' raggiungibile come `ergo-api:7000` dalla rete di compose:
+# e' l'indirizzo che il connettore del tunnel usa come origine.
+EXPOSE 7000
 
 # ASGI: servono le WebSocket per gli aggiornamenti di stato del report.
-CMD ["daphne", "-b", "0.0.0.0", "-p", "8000", "config.asgi:application"]
+CMD ["daphne", "-b", "0.0.0.0", "-p", "7000", "config.asgi:application"]

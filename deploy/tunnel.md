@@ -69,7 +69,7 @@ sudo systemctl enable --now cloudflared
    | Subdomain | `api` |
    | Domain | `syntaxnode.work` |
    | Type | `HTTP` |
-   | URL | `localhost:8000` (o `localhost:8080` con nginx) |
+   | URL | `localhost:7000` (o `localhost:8080` con nginx) |
 
 Il record DNS lo crea Cloudflare. In questo modello `config.yml` non viene
 letto: le regole stanno nella dashboard.

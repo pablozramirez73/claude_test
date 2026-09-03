@@ -20,7 +20,7 @@ ingress:
   # Con i report su R2 si punta direttamente a daphne; se restano su disco
   # metti nginx davanti (nginx-api-tunnel.conf) e usa http://127.0.0.1:8080.
   - hostname: api.syntaxnode.work
-    service: http://127.0.0.1:8000
+    service: http://127.0.0.1:7000
     originRequest:
       # Il canale WebSocket degli aggiornamenti di stato del report resta
       # aperto a lungo: senza questi valori il tunnel lo chiuderebbe.

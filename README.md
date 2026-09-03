@@ -105,15 +105,15 @@ cp backend/.env.example backend/.env      # inserisci TELEGRAM_BOT_TOKEN
 docker compose up --build
 ```
 
-Espone l'API su `:8040` (servizio `ergo-api`) e la Mini App su `:5173`.
-Fuori da compose — `make run`, systemd sul VPS — daphne resta sulla 8000.
+Espone l'API sulla `:8040` dell'host (servizio `ergo-api`, daphne ascolta
+sulla `:7000` nel container) e la Mini App su `:5173`.
 
 ### In locale
 
 ```bash
 make install          # dipendenze backend + Mini App + asset MediaPipe
 make migrate
-make run              # API ASGI su :8000
+make run              # API ASGI su :7000
 make worker           # worker Celery in un altro terminale
 make bot              # bot in polling
 make tma-dev          # Mini App su :5173
@@ -132,7 +132,7 @@ cd backend
 export DJANGO_SETTINGS_MODULE=config.settings_dev
 python manage.py migrate
 python manage.py sqlite_wal        # una volta sola: journal WAL sul file
-python -m uvicorn config.asgi:application --port 8000
+python -m uvicorn config.asgi:application --port 7000
 ```
 
 ### Configurare il bot

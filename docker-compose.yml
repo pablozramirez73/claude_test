@@ -27,9 +27,11 @@ services:
       REDIS_URL: redis://redis:6379/0
     command: >
       sh -c "python manage.py migrate &&
-             daphne -b 0.0.0.0 -p 8040 config.asgi:application"
+             daphne -b 0.0.0.0 -p 7000 config.asgi:application"
     ports:
-      - "8040:8040"
+      # 8040 sull'host, 7000 nel container. Il tunnel non passa da qui:
+      # raggiunge `ergo-api:7000` direttamente sulla rete di compose.
+      - "8040:7000"
     volumes:
       - media:/app/media
     depends_on:

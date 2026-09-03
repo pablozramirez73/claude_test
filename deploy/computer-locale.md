@@ -73,12 +73,12 @@ Cloudflared**:
    | Subdomain | `api` |
    | Domain | `syntaxnode.work` |
    | Type | `HTTP` |
-   | URL | `ergo-api:8040` |
+   | URL | `ergo-api:7000` |
 
-   `ergo-api` è il nome del servizio nella rete di compose e `8040` la
-   porta su cui ascolta daphne: il container cloudflared lo risolve da
-   solo, senza passare dall'host e senza che la porta sia pubblicata verso
-   l'esterno.
+   Attenzione al numero: **7000 è la porta dentro il container**, quella su
+   cui ascolta daphne. Il connettore vive sulla stessa rete di compose e
+   parla direttamente al container, quindi non passa dalla porta pubblicata
+   sull'host (la 8040) e non c'è bisogno che quest'ultima esista.
 
 Metti il token in un file `.env` nella radice del repository — quello letto
 da compose, diverso da `backend/.env`:
@@ -107,7 +107,8 @@ docker compose exec ergo-api python manage.py createsuperuser
 ## 5. Verifica
 
 ```bash
-# 1. l'API risponde in locale (pubblicata solo su loopback)
+# 1. l'API risponde in locale: 8040 sull'host mappata sulla 7000 del
+#    container, pubblicata solo su loopback
 curl http://127.0.0.1:8040/healthz/
 
 # 2. e attraverso il tunnel

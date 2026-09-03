@@ -11,7 +11,7 @@ migrate:  ## Applica le migrazioni
 	cd backend && python manage.py migrate
 
 run:  ## Avvia l'API in ASGI (WebSocket incluse)
-	cd backend && daphne -b 0.0.0.0 -p 8000 config.asgi:application
+	cd backend && daphne -b 0.0.0.0 -p 7000 config.asgi:application
 
 worker:  ## Avvia il worker Celery
 	cd backend && celery -A config worker -l info

@@ -16,7 +16,7 @@ services:
     # porte si sommano, quindi senza di esso resterebbe attiva anche la
     # pubblicazione su 0.0.0.0 del file principale.
     ports: !override
-      - "127.0.0.1:8040:8040"
+      - "127.0.0.1:8040:7000"
 
   cloudflared:
     image: cloudflare/cloudflared:latest
