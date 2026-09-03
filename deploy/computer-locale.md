@@ -2,21 +2,26 @@
 
 Percorso pensato per chi non ha un server: il computer di casa esegue
 l'intera applicazione — Mini App, API, PostgreSQL, Redis, worker e bot — e
-Cloudflare Tunnel la pubblica su `syntaxnode.work` senza aprire porte sul
+Cloudflare Tunnel la pubblica su `ergo.syntaxnode.work` senza aprire porte sul
 router. Niente Cloudflare Pages, niente PostgreSQL o Redis installati a
 livello di sistema: tutto in container.
 
 ## Come è messa insieme
 
 ```
-   Telegram ──► syntaxnode.work ──► tunnel ──► container `tma` (nginx)
-                                                 │
-                                                 ├── /            Mini App compilata
-                                                 └── /api/ /ws/   ──► ergo-api:7000
-                                                     /admin/ /media/     (daphne)
-                                                                          │
-                                                              db · redis · worker · beat · bot
+ Telegram ──► ergo.syntaxnode.work ──► tunnel ──► container `tma` (nginx)
+                                                    │
+                                                    ├── /            Mini App compilata
+                                                    └── /api/ /ws/   ──► ergo-api:7000
+                                                        /admin/ /media/     (daphne)
+                                                                             │
+                                                                 db · redis · worker · beat · bot
 ```
+
+L'hostname pubblico e' l'unica cosa da cambiare per pubblicare l'app
+altrove: la Mini App chiama l'API con URL relativi, quindi non va
+ricompilata quando il dominio cambia. Lato server basta allineare
+`ALLOWED_HOSTS`, `CSRF_TRUSTED_ORIGINS` e `TMA_URL` in `backend/.env`.
 
 Un solo hostname pubblico. Mini App e API stanno quindi **sulla stessa
 origine**: niente preflight CORS da soddisfare, niente WebSocket che
@@ -74,9 +79,9 @@ In `backend/.env` compila almeno:
 ```
 DJANGO_SECRET_KEY=<python3 -c "import secrets;print(secrets.token_urlsafe(64))">
 DEBUG=False
-ALLOWED_HOSTS=syntaxnode.work
-CSRF_TRUSTED_ORIGINS=https://syntaxnode.work
-TMA_URL=https://syntaxnode.work
+ALLOWED_HOSTS=ergo.syntaxnode.work
+CSRF_TRUSTED_ORIGINS=https://ergo.syntaxnode.work
+TMA_URL=https://ergo.syntaxnode.work
 TELEGRAM_BOT_TOKEN=<token di @BotFather>
 ```
 
@@ -112,7 +117,7 @@ Cloudflared**:
 
    | Campo | Valore |
    | --- | --- |
-   | Subdomain | *(vuoto)* |
+   | Subdomain | `ergo` |
    | Domain | `syntaxnode.work` |
    | Path | *(vuoto)* |
    | Type | `HTTP` |
@@ -135,7 +140,7 @@ Cloudflared**:
      quel record da **DNS → Records** e riprova.
 
    Finché non aggiungi l'hostname pubblico il tunnel risulta connesso ma
-   non instrada nulla: è normale che `syntaxnode.work` non risponda.
+   non instrada nulla: è normale che `ergo.syntaxnode.work` non risponda.
 
 Incolla il token nel `.env` della radice, quello copiato prima:
 
@@ -197,8 +202,8 @@ curl http://127.0.0.1:5190/healthz/
 # -> {"status": "ok", "service": "ergocheck"}
 
 # 3. dall'esterno, attraverso il tunnel
-curl https://syntaxnode.work/healthz/
-curl -I https://syntaxnode.work/
+curl https://ergo.syntaxnode.work/healthz/
+curl -I https://ergo.syntaxnode.work/
 
 # 4. il tunnel è sano
 docker compose logs cloudflared | tail -20
@@ -215,9 +220,9 @@ Se il tunnel è HEALTHY ma il dominio non risponde come dovrebbe:
 | **1033** o «Tunnel not found» | hostname pubblico non configurato, o record DNS che punta altrove |
 | **502 Bad Gateway** | `Type` impostato su HTTPS invece di HTTP, oppure il container `tma` non è partito (`docker compose ps`) |
 | **404 su tutto** | `URL` sbagliato nell'hostname pubblico: deve essere `tma:80` |
-| La Mini App si apre ma le chiamate falliscono | `ALLOWED_HOSTS` in `backend/.env` non contiene `syntaxnode.work` |
+| La Mini App si apre ma le chiamate falliscono | `ALLOWED_HOSTS` in `backend/.env` non contiene `ergo.syntaxnode.work` |
 
-Apri poi `https://syntaxnode.work` in un browser: deve comparire la
+Apri poi `https://ergo.syntaxnode.work` in un browser: deve comparire la
 schermata di registrazione dell'azienda. Fuori da Telegram non c'è
 `initData`, quindi le chiamate all'API rispondono 401: è il comportamento
 atteso. La prova vera si fa aprendo la Mini App dal bot.
@@ -225,7 +230,7 @@ atteso. La prova vera si fa aprendo la Mini App dal bot.
 ## 6. Il bot
 
 Su [@BotFather](https://t.me/BotFather): `/newapp` sul bot, URL della Mini
-App `https://syntaxnode.work`. Poi aggiungi il bot al gruppo aziendale e
+App `https://ergo.syntaxnode.work`. Poi aggiungi il bot al gruppo aziendale e
 invia `/collega` per registrarlo come destinatario dei report.
 
 ## 7. Impedire la sospensione

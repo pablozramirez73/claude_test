@@ -94,8 +94,10 @@ Due topologie, entrambe documentate in [`deploy/`](deploy/README.md):
 
 - **Tutto su una macchina**, anche un computer personale: un solo container
   nginx serve la Mini App e inoltra `/api/` e `/ws/` al backend, e
-  Cloudflare Tunnel lo pubblica su un unico hostname. Mini App e API sulla
-  stessa origine, nessuna porta aperta sul router.
+  Cloudflare Tunnel lo pubblica su un unico hostname (nell'esempio
+  `ergo.syntaxnode.work`). Mini App e API sulla stessa origine, nessuna
+  porta aperta sul router; la build usa URL relativi, quindi cambiare
+  dominio non richiede di ricompilarla.
   Vedi [`deploy/computer-locale.md`](deploy/computer-locale.md).
 - **Distribuita**: Mini App su Cloudflare Pages, API su un VPS dietro
   Cloudflare. Pages serve solo file statici, mentre Django, Celery,
