@@ -255,12 +255,34 @@ systemctl status cloudflared           # come servizio di sistema (Linux)
 brew services list | grep cloudflared  # macOS
 ```
 
+In PowerShell:
+
+```powershell
+docker compose ps cloudflared
+Get-Service   cloudflared -ErrorAction SilentlyContinue
+Get-Process   cloudflared -ErrorAction SilentlyContinue
+
+# Chi occupa la porta 80 dell'host (di solito il server che risponde al
+# posto dell'applicazione)
+Get-Process -Id (Get-NetTCPConnection -LocalPort 80 -State Listen).OwningProcess
+```
+
+Attenzione, in PowerShell `curl` è un alias di `Invoke-WebRequest`, che ha
+opzioni diverse: per i comandi di verifica di questa guida usa
+`curl.exe`.
+
 **Se rispondono entrambi**, hai due connettori sullo stesso tunnel e le
 richieste si dividono fra loro: le risposte cambiano da una chiamata
 all'altra. Ferma quello che non ti serve:
 
 ```bash
 sudo cloudflared service uninstall     # rimuove quello installato sull'host
+```
+
+In PowerShell, da una finestra **come amministratore**:
+
+```powershell
+cloudflared service uninstall
 ```
 
 Nella dashboard, dentro il tunnel, l'elenco dei connettori deve mostrarne
