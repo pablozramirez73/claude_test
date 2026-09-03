@@ -313,7 +313,7 @@ ergo.syntaxnode.work {
 }
 ```
 | La Mini App si apre ma le chiamate falliscono | `ALLOWED_HOSTS` in `backend/.env` non contiene `ergo.syntaxnode.work` |
-| **400** su ogni rotta, con corpo di 154 byte | è `DisallowedHost`: l'Host della richiesta non è in `ALLOWED_HOSTS`. Capita tipicamente provando da `127.0.0.1:5190`, che va elencato anche lui |
+| **400** su ogni rotta, con corpo di 154 byte | è `DisallowedHost`: l'Host della richiesta non è in `ALLOWED_HOSTS`. Capita tipicamente provando da `127.0.0.1:5190`, che va elencato anche lui. Se l'hai già corretto e resta 400, il container non ha riletto il file: serve `up -d --force-recreate`, non `restart` |
 
 Apri poi `https://ergo.syntaxnode.work` in un browser: deve comparire la
 schermata di registrazione dell'azienda. Fuori da Telegram non c'è
@@ -341,7 +341,13 @@ Su macOS con il coperchio chiuso serve l'alimentatore collegato.
 ```bash
 docker compose logs -f ergo-api            # log dell'API
 docker compose logs -f tma                 # log di nginx
-docker compose restart ergo-api            # dopo modifiche a backend/.env
+
+# Dopo modifiche a backend/.env. `restart` NON basta: riavvia il container
+# con l'ambiente che aveva gia', quindi il file non viene riletto.
+docker compose up -d --force-recreate ergo-api worker beat bot
+
+# Cosa vede davvero il container:
+docker compose exec ergo-api printenv ALLOWED_HOSTS
 docker compose down                        # ferma tutto (i dati restano)
 docker compose exec db pg_dump -U ergocheck ergocheck > backup.sql
 ```
