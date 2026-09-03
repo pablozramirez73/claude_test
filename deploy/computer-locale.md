@@ -127,6 +127,32 @@ della Mini App: richiede qualche minuto. Poi:
 docker compose exec ergo-api python manage.py createsuperuser
 ```
 
+### Se cloudflared dice «Provided Tunnel token is not valid»
+
+```bash
+python3 deploy/check-tunnel-token.py
+```
+
+Controlla la forma del token senza stamparlo. Le cause, in ordine di
+frequenza:
+
+1. **È il token API invece di quello del connettore.** Il token API inizia
+   con `cfat_`, quello del tunnel con `eyJ` (è il base64 di un JSON).
+   Servono a cose diverse e non sono intercambiabili.
+2. **È stato copiato un pezzo del comando** invece della sola stringa dopo
+   `--token`, oppure il terminale lo ha troncato a capo.
+3. **Virgolette o spazi** attorno al valore nel `.env`.
+4. **Il tunnel è stato cancellato e ricreato**: il token vecchio non vale
+   più, va ripreso dalla dashboard.
+5. **Il tunnel è stato creato da riga di comando** (`cloudflared tunnel
+   create`): quello è un tunnel a gestione locale, non ha un token di
+   connettore. O lo si ricrea dalla dashboard, o si segue il percorso con
+   `config.yml` descritto in [`tunnel.md`](tunnel.md).
+
+Il token si prende da **Zero Trust → Networks → Tunnels → il tuo tunnel →
+Configure**: nel comando di installazione mostrato, è la stringa che segue
+`--token`.
+
 ## 5. Verifica
 
 ```bash
