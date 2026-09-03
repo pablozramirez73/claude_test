@@ -8,6 +8,11 @@
     />
     <meta name="theme-color" content="#0b6bcb" />
     <title>ErgoCheck</title>
+    <!-- .ico per i browser che lo cercano comunque alla radice, .svg per
+         quelli moderni, apple-touch-icon per la schermata home su iOS. -->
+    <link rel="icon" href="/favicon.ico" sizes="32x32" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <!-- SDK della Mini App: deve stare prima del bundle, l'app legge
          window.Telegram.WebApp al primo render. -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
