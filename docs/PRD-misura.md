@@ -137,6 +137,11 @@ espliciti e commentati dove serve hardware non simulabile qui:
   `host.docker.internal`. Stessa filosofia privacy del resto del progetto:
   nessun dato inviato a servizi esterni. Best-effort: il resto dell'API
   non dipende in alcun modo dalla sua disponibilità.
+- Admin operativo (`/admin/`, `profiles/admin.py` + `profiles/dashboard.py`):
+  non nello spec originale, aggiunto su richiesta esplicita. Tema
+  **django-unfold**, pagina iniziale sostituita da una dashboard reale
+  (KPI, distribuzione taglie, misure medie, ultimi profili, stato live
+  dell'LLM locale) invece del semplice elenco modelli di default.
 - **Fuori scope in questo POC** (richiedono hardware/infra non testabile qui, ma sono
   disegnati nell'architettura sopra): accesso diretto ad ARKit Depth API nativo (solo
   WebXR Depth Sensing lato web), il vero e proprio processo bot Telegram

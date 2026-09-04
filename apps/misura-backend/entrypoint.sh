@@ -15,4 +15,10 @@ echo "Postgres is up."
 
 python manage.py migrate --noinput
 
+# Needed for the admin (Unfold's CSS/JS + Material Symbols) to render
+# correctly under gunicorn — WhiteNoiseMiddleware (settings.py) serves
+# whatever lands in STATIC_ROOT. Cheap and idempotent; runs on every boot
+# so a changed Unfold/Django version always has fresh assets.
+python manage.py collectstatic --noinput
+
 exec "$@"

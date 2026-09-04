@@ -30,6 +30,35 @@ Nessuna immagine, nessun video, nessuna point cloud: quei dati non lasciano
 mai il client (vedi `apps/misura-miniapp`) — qui arrivano solo le tre
 misure numeriche finali.
 
+## Admin (`/admin/`) — dashboard operativa
+
+Tema **[django-unfold](https://github.com/unfoldadmin/django-unfold)**, con
+la pagina iniziale trasformata in una vera dashboard invece del solito
+elenco di modelli Django:
+
+- **KPI in evidenza**: profili salvati totali, nuovi oggi/questa settimana,
+  percentuale di profili con un consiglio di stile generato, stato live
+  dell'LLM locale (raggiungibile? modello scaricato?).
+- **Distribuzione taglie**: quanti profili ricadono in ogni taglia
+  (XS→XXL), calcolata con lo stesso size-chart generico del frontend
+  (`profiles/sizing.py`, porting di `measure/sizeChart.ts`).
+- **Misure medie** (petto/vita/fianchi) su tutti i profili salvati.
+- **Ultimi profili** salvati, con link diretto alla relativa scheda admin.
+
+Tutto calcolato in `profiles/dashboard.py` (`dashboard_callback`, agganciato
+via `UNFOLD["DASHBOARD_CALLBACK"]` in `config/settings.py`) e renderizzato
+da `templates/admin/index.html` (override del template di Unfold — il
+`TEMPLATES["DIRS"]` di progetto ha priorità sui template forniti dai
+pacchetti). Il controllo di raggiungibilità di Ollama ha un timeout breve
+(1.5s): se Ollama non risponde, la dashboard lo segnala con un badge rosso
+invece di restare in attesa.
+
+La scheda profilo (`profiles/admin.py`) mostra la taglia consigliata e
+l'esito del consiglio di stile come badge colorati, ha filtri a intervallo
+su petto/vita/fianchi e data di creazione, e un'azione bulk **"Genera
+consiglio di stile"** per lanciare l'LLM locale su più profili selezionati
+in un colpo solo.
+
 ## Consigli di stile via LLM locale (Ollama)
 
 Funzionalità aggiunta su richiesta esplicita, non nello spec originale del
@@ -66,7 +95,16 @@ docker compose up backend-dev    # → http://localhost:8098
 ```
 
 Le migration girano automaticamente all'avvio del container
-(`entrypoint.sh` attende Postgres, poi esegue `manage.py migrate`).
+(`entrypoint.sh` attende Postgres, poi esegue `manage.py migrate` e
+`collectstatic`, quest'ultimo necessario perché l'admin/Unfold sia
+correttamente stilizzato dietro gunicorn — vedi `whitenoise` in
+`requirements.txt`).
+
+Per accedere a `/admin/` la prima volta serve un utente:
+
+```bash
+docker compose exec backend python manage.py createsuperuser
+```
 
 Porte già occupate? Sono tutte sovrascrivibili — vedi `.env.example`
 (`BACKEND_PORT`, `BACKEND_DEV_PORT`, `POSTGRES_PORT`).

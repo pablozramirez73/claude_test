@@ -6,9 +6,10 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APIClient
 
-from . import llm
+from . import dashboard, llm
 from .hashing import hash_telegram_user_id
 from .models import Profile, generate_profile_id
+from .sizing import recommend_size
 
 
 class GenerateProfileIdTests(TestCase):
@@ -174,3 +175,67 @@ class ProfileAdviceApiTests(TestCase):
     def test_advice_for_missing_profile_404(self):
         response = self.client.post(reverse("profile-advice", args=["doesnotexist"]))
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+
+class RecommendSizeTests(TestCase):
+    """Mirrors apps/misura-miniapp/src/measure/sizeChart.test.ts — same chart, same cases."""
+
+    def test_picks_smallest_size_covering_all_measurements(self):
+        self.assertEqual(recommend_size(80, 65, 85), "XS")
+        self.assertEqual(recommend_size(100, 84, 104), "M")
+
+    def test_driven_by_the_largest_required_size(self):
+        # Chest alone fits S (max 94), but hips need L (max 114).
+        self.assertEqual(recommend_size(90, 75, 112), "L")
+
+    def test_falls_back_to_largest_size_when_body_exceeds_every_range(self):
+        self.assertEqual(recommend_size(200, 200, 200), "XXL")
+
+
+class DashboardCallbackTests(TestCase):
+    """profiles/dashboard.py — powers the admin index page (templates/admin/index.html)."""
+
+    def setUp(self):
+        Profile.objects.create(chest_cm=96.5, waist_cm=82.1, hips_cm=101.0, style_advice="consiglio")
+        Profile.objects.create(chest_cm=110.0, waist_cm=98.0, hips_cm=118.0)
+        Profile.objects.create(chest_cm=80.0, waist_cm=65.0, hips_cm=88.0)
+
+    @patch("profiles.dashboard.requests.get", side_effect=requests.ConnectionError("refused"))
+    def test_counts_and_advice_percentage(self, mock_get):
+        context = dashboard.dashboard_callback(request=None, context={})
+
+        self.assertEqual(context["misura_total_profiles"], 3)
+        self.assertEqual(context["misura_with_advice"], 1)
+        self.assertEqual(context["misura_advice_percent"], 33)
+
+    @patch("profiles.dashboard.requests.get", side_effect=requests.ConnectionError("refused"))
+    def test_size_distribution_matches_recommend_size(self, mock_get):
+        context = dashboard.dashboard_callback(request=None, context={})
+        by_label = {row["label"]: row["count"] for row in context["misura_size_distribution"]}
+
+        self.assertEqual(by_label["XS"], 1)  # 80/65/88
+        self.assertEqual(by_label["M"], 1)  # 96.5/82.1/101
+        self.assertEqual(by_label["XL"], 1)  # 110/98/118 — waist 98 rules out L (max 94)
+        self.assertEqual(sum(by_label.values()), 3)
+
+    @patch("profiles.dashboard.requests.get", side_effect=requests.ConnectionError("refused"))
+    def test_ollama_unreachable_is_reported_not_raised(self, mock_get):
+        context = dashboard.dashboard_callback(request=None, context={})
+        self.assertEqual(context["misura_ollama"], {"reachable": False, "model_pulled": False, "models_count": 0})
+
+    @patch("profiles.dashboard.requests.get")
+    def test_ollama_reachable_with_model_pulled(self, mock_get):
+        mock_get.return_value.json.return_value = {"models": [{"name": "gemma4:latest"}]}
+        mock_get.return_value.raise_for_status.return_value = None
+
+        with self.settings(OLLAMA_MODEL="gemma4:latest"):
+            context = dashboard.dashboard_callback(request=None, context={})
+
+        self.assertTrue(context["misura_ollama"]["reachable"])
+        self.assertTrue(context["misura_ollama"]["model_pulled"])
+
+    @patch("profiles.dashboard.requests.get", side_effect=requests.ConnectionError("refused"))
+    def test_recent_profiles_ordered_newest_first(self, mock_get):
+        context = dashboard.dashboard_callback(request=None, context={})
+        created_ats = [row["created_at"] for row in context["misura_recent_profiles"]]
+        self.assertEqual(created_ats, sorted(created_ats, reverse=True))

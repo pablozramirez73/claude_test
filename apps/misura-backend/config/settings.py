@@ -33,9 +33,16 @@ DEBUG = os.environ.get("DJANGO_DEBUG", "true").lower() in ("1", "true", "yes")
 ALLOWED_HOSTS = _env_list("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1")
 
 INSTALLED_APPS = [
+    # "unfold" must come before "django.contrib.admin" — its AppConfig
+    # swaps admin.site for a themed UnfoldAdminSite on startup. See
+    # profiles/admin.py and profiles/dashboard.py for the admin dashboard
+    # this powers.
+    "unfold",
+    "unfold.contrib.filters",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
+    "django.contrib.humanize",
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
@@ -46,6 +53,12 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    # Serves static files (admin/Unfold CSS+JS, ...) directly from gunicorn
+    # in production — DEBUG=True/runserver already does this on its own,
+    # but the gunicorn path (the "backend" compose service) needs it or the
+    # admin would render completely unstyled. entrypoint.sh runs
+    # `collectstatic` on every boot.
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -60,7 +73,10 @@ ROOT_URLCONF = "config.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [],
+        # Project-level templates take priority over app-provided ones —
+        # this is how templates/admin/index.html (the custom dashboard,
+        # see profiles/dashboard.py) overrides unfold's own admin index.
+        "DIRS": [BASE_DIR / "templates"],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
@@ -104,6 +120,13 @@ USE_TZ = True
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
+STORAGES = {
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    # Compressed + hashed filenames, served straight from gunicorn via
+    # WhiteNoiseMiddleware above — no separate nginx/static host needed.
+    "staticfiles": {"BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"},
+}
+
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # --- CORS ---------------------------------------------------------------
@@ -133,3 +156,54 @@ REST_FRAMEWORK = {
 OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL", "http://127.0.0.1:11434")
 OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "gemma4:latest")
 OLLAMA_TIMEOUT_SECONDS = float(os.environ.get("OLLAMA_TIMEOUT_SECONDS", "60"))
+
+# --- Admin (django-unfold) -----------------------------------------------
+# The index page (templates/admin/index.html) is a custom dashboard built
+# from profiles/dashboard.dashboard_callback's stats — see that module for
+# what it computes.
+UNFOLD = {
+    "SITE_TITLE": "MISURA",
+    "SITE_HEADER": "MISURA",
+    "SITE_SUBHEADER": "Il Sarto LiDAR — pannello operativo",
+    "SITE_SYMBOL": "straighten",  # Material Symbols: a ruler — fits a fit/measurement app
+    "SHOW_HISTORY": True,
+    "SHOW_VIEW_ON_SITE": False,
+    "BORDER_RADIUS": "10px",
+    "COLORS": {
+        "primary": {
+            "50": "oklch(97.7% .013 236.62)",
+            "100": "oklch(95.1% .026 236.824)",
+            "200": "oklch(90.1% .058 230.902)",
+            "300": "oklch(82.8% .111 230.318)",
+            "400": "oklch(74.6% .16 232.661)",
+            "500": "oklch(68.5% .169 237.323)",
+            "600": "oklch(58.8% .158 241.966)",
+            "700": "oklch(50% .134 242.749)",
+            "800": "oklch(42.4% .1 240.756)",
+            "900": "oklch(37.9% .146 265.522)",
+            "950": "oklch(28.2% .091 267.935)",
+        },
+    },
+    "SIDEBAR": {
+        "show_search": True,
+        "navigation": [
+            {
+                "title": "MISURA",
+                "separator": True,
+                "items": [
+                    {
+                        "title": "Dashboard",
+                        "icon": "dashboard",
+                        "link": "/admin/",
+                    },
+                    {
+                        "title": "Profili",
+                        "icon": "group",
+                        "link": "/admin/profiles/profile/",
+                    },
+                ],
+            },
+        ],
+    },
+    "DASHBOARD_CALLBACK": "profiles.dashboard.dashboard_callback",
+}

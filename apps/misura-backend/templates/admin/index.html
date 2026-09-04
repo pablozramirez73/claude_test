@@ -1,0 +1,119 @@
+{# Custom admin dashboard (overrides unfold's own admin/index.html — this
+   project's TEMPLATES DIRS makes this file win, see config/settings.py).
+   Data comes from profiles.dashboard.dashboard_callback via
+   UNFOLD["DASHBOARD_CALLBACK"]. #}
+{% extends "admin/base.html" %}
+{% load i18n humanize unfold %}
+
+{% block title %}{% if subtitle %}{{ subtitle }} | {% endif %}{{ title }} | {{ site_title|default:_('Django site admin') }}{% endblock %}
+
+{% block branding %}
+    {% include "unfold/helpers/site_branding.html" %}
+{% endblock %}
+
+{% block content %}
+<div class="flex flex-col gap-6">
+
+    {# --- KPI row ------------------------------------------------------ #}
+    <div class="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+        {% component "unfold/components/card.html" with icon="group" %}
+            {% component "unfold/components/text.html" with class="text-font-subtle-light dark:text-font-subtle-dark" %}Profili salvati{% endcomponent %}
+            {% component "unfold/components/title.html" %}{{ misura_total_profiles|intcomma }}{% endcomponent %}
+        {% endcomponent %}
+
+        {% component "unfold/components/card.html" with icon="today" %}
+            {% component "unfold/components/text.html" with class="text-font-subtle-light dark:text-font-subtle-dark" %}Oggi / questa settimana{% endcomponent %}
+            {% component "unfold/components/title.html" %}{{ misura_profiles_today }} <span class="text-base font-normal text-font-subtle-light dark:text-font-subtle-dark">/ {{ misura_profiles_week }}</span>{% endcomponent %}
+        {% endcomponent %}
+
+        {% component "unfold/components/card.html" with icon="auto_awesome" %}
+            {% component "unfold/components/text.html" with class="text-font-subtle-light dark:text-font-subtle-dark" %}Consigli di stile generati{% endcomponent %}
+            {% component "unfold/components/title.html" %}{{ misura_with_advice }} <span class="text-base font-normal text-font-subtle-light dark:text-font-subtle-dark">({{ misura_advice_percent }}%)</span>{% endcomponent %}
+        {% endcomponent %}
+
+        {% component "unfold/components/card.html" with icon=misura_ollama.reachable|yesno:"smart_toy,cloud_off" %}
+            {% component "unfold/components/text.html" with class="text-font-subtle-light dark:text-font-subtle-dark" %}LLM locale &middot; {{ misura_ollama_model }}{% endcomponent %}
+            <div class="mt-1">
+                {% if misura_ollama.reachable %}
+                    {% if misura_ollama.model_pulled %}
+                        {% component "unfold/helpers/label.html" with variant="success" text="online, modello pronto" %}{% endcomponent %}
+                    {% else %}
+                        {% component "unfold/helpers/label.html" with variant="warning" text="online, modello non trovato" %}{% endcomponent %}
+                    {% endif %}
+                {% else %}
+                    {% component "unfold/helpers/label.html" with variant="danger" text="non raggiungibile" %}{% endcomponent %}
+                {% endif %}
+            </div>
+        {% endcomponent %}
+    </div>
+
+    {# --- Size distribution / averages / recent profiles ---------------- #}
+    <div class="grid gap-4 grid-cols-1 lg:grid-cols-3">
+        <div class="lg:col-span-1">
+            {% component "unfold/components/card.html" with title="Distribuzione taglie" %}
+                {% if misura_total_profiles %}
+                    <div class="flex flex-col gap-4">
+                        {% for size in misura_size_distribution %}
+                            {% component "unfold/components/progress.html" with title=size.label description=size.count value=size.percent %}{% endcomponent %}
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-sm text-font-subtle-light dark:text-font-subtle-dark">Nessun profilo salvato ancora — la distribuzione apparirà qui.</p>
+                {% endif %}
+            {% endcomponent %}
+        </div>
+
+        <div class="lg:col-span-1">
+            {% component "unfold/components/card.html" with title="Misure medie" %}
+                {% if misura_total_profiles %}
+                    <dl class="flex flex-col gap-3.5 text-sm">
+                        <div class="flex items-center justify-between">
+                            <dt class="text-font-subtle-light dark:text-font-subtle-dark">Petto</dt>
+                            <dd class="font-semibold">{{ misura_avg_chest|floatformat:1 }} cm</dd>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <dt class="text-font-subtle-light dark:text-font-subtle-dark">Vita</dt>
+                            <dd class="font-semibold">{{ misura_avg_waist|floatformat:1 }} cm</dd>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <dt class="text-font-subtle-light dark:text-font-subtle-dark">Fianchi</dt>
+                            <dd class="font-semibold">{{ misura_avg_hips|floatformat:1 }} cm</dd>
+                        </div>
+                    </dl>
+                {% else %}
+                    <p class="text-sm text-font-subtle-light dark:text-font-subtle-dark">Nessun profilo salvato ancora.</p>
+                {% endif %}
+            {% endcomponent %}
+        </div>
+
+        <div class="lg:col-span-1">
+            {% component "unfold/components/card.html" with title="Ultimi profili" %}
+                {% if misura_recent_profiles %}
+                    <div class="flex flex-col divide-y divide-base-200 dark:divide-base-800 -mt-2">
+                        {% for profile in misura_recent_profiles %}
+                            <a href="{% url 'admin:profiles_profile_change' profile.profile_id %}" class="flex items-center justify-between gap-3 py-2.5 hover:opacity-70">
+                                <div class="flex min-w-0 flex-col">
+                                    <span class="truncate text-sm font-medium">{{ profile.profile_id }}</span>
+                                    <span class="text-xs text-font-subtle-light dark:text-font-subtle-dark">{{ profile.created_at|timesince }} fa{% if profile.has_advice %} &middot; consiglio generato{% endif %}</span>
+                                </div>
+                                {% component "unfold/helpers/label.html" with variant="primary" text=profile.size %}{% endcomponent %}
+                            </a>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-sm text-font-subtle-light dark:text-font-subtle-dark">Nessun profilo salvato ancora.</p>
+                {% endif %}
+            {% endcomponent %}
+        </div>
+    </div>
+
+    {# --- Standard Django app list + recent actions, unchanged from unfold's own index --- #}
+    <div class="flex flex-col lg:flex-row lg:gap-8">
+        <div class="grow">
+            {% include "unfold/helpers/app_list_default.html" %}
+        </div>
+
+        {% include "unfold/helpers/history.html" %}
+    </div>
+</div>
+{% endblock %}
