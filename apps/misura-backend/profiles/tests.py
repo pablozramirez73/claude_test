@@ -1,8 +1,12 @@
+from unittest.mock import patch
+
+import requests
 from django.test import TestCase
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APIClient
 
+from . import llm
 from .hashing import hash_telegram_user_id
 from .models import Profile, generate_profile_id
 
@@ -91,3 +95,82 @@ class ProfileApiTests(TestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.json()["profile_id"], "abcd1234")
+
+
+class GenerateStyleAdviceTests(TestCase):
+    """profiles/llm.py — mocked HTTP, no real Ollama needed."""
+
+    @patch("profiles.llm.requests.post")
+    def test_returns_ollama_response_text(self, mock_post):
+        mock_post.return_value.json.return_value = {"response": "Un abbinamento slim-fit ti starebbe benissimo."}
+        mock_post.return_value.raise_for_status.return_value = None
+
+        advice = llm.generate_style_advice(96.5, 82.1, 101.0)
+
+        self.assertEqual(advice, "Un abbinamento slim-fit ti starebbe benissimo.")
+        called_json = mock_post.call_args.kwargs["json"]
+        self.assertIn("96.5", called_json["prompt"])
+        self.assertFalse(called_json["stream"])
+
+    @patch("profiles.llm.requests.post", side_effect=requests.ConnectionError("refused"))
+    def test_connection_error_raises_advice_generation_error(self, mock_post):
+        with self.assertRaises(llm.AdviceGenerationError):
+            llm.generate_style_advice(96.5, 82.1, 101.0)
+
+    @patch("profiles.llm.requests.post")
+    def test_empty_response_raises_advice_generation_error(self, mock_post):
+        mock_post.return_value.json.return_value = {"response": "   "}
+        mock_post.return_value.raise_for_status.return_value = None
+
+        with self.assertRaises(llm.AdviceGenerationError):
+            llm.generate_style_advice(96.5, 82.1, 101.0)
+
+
+class ProfileAdviceApiTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.profile = Profile.objects.create(chest_cm=96.5, waist_cm=82.1, hips_cm=101.0)
+
+    @patch("profiles.views.llm.generate_style_advice")
+    def test_generates_and_caches_advice(self, mock_generate):
+        mock_generate.return_value = "Prova un taglio regular fit."
+
+        response = self.client.post(reverse("profile-advice", args=[self.profile.profile_id]))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json()["style_advice"], "Prova un taglio regular fit.")
+        self.profile.refresh_from_db()
+        self.assertEqual(self.profile.style_advice, "Prova un taglio regular fit.")
+        mock_generate.assert_called_once()
+
+    @patch("profiles.views.llm.generate_style_advice")
+    def test_second_call_uses_cache_without_calling_ollama_again(self, mock_generate):
+        mock_generate.return_value = "Prova un taglio regular fit."
+
+        self.client.post(reverse("profile-advice", args=[self.profile.profile_id]))
+        response = self.client.post(reverse("profile-advice", args=[self.profile.profile_id]))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        mock_generate.assert_called_once()  # not called again on the 2nd request
+
+    @patch("profiles.views.llm.generate_style_advice")
+    def test_regenerate_query_param_forces_a_fresh_call(self, mock_generate):
+        mock_generate.side_effect = ["prima versione", "seconda versione"]
+
+        self.client.post(reverse("profile-advice", args=[self.profile.profile_id]))
+        response = self.client.post(f"{reverse('profile-advice', args=[self.profile.profile_id])}?regenerate=true")
+
+        self.assertEqual(response.json()["style_advice"], "seconda versione")
+        self.assertEqual(mock_generate.call_count, 2)
+
+    @patch("profiles.views.llm.generate_style_advice", side_effect=llm.AdviceGenerationError("Ollama non raggiungibile"))
+    def test_ollama_unavailable_returns_503_without_touching_profile(self, mock_generate):
+        response = self.client.post(reverse("profile-advice", args=[self.profile.profile_id]))
+
+        self.assertEqual(response.status_code, status.HTTP_503_SERVICE_UNAVAILABLE)
+        self.profile.refresh_from_db()
+        self.assertIsNone(self.profile.style_advice)
+
+    def test_advice_for_missing_profile_404(self):
+        response = self.client.post(reverse("profile-advice", args=["doesnotexist"]))
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)

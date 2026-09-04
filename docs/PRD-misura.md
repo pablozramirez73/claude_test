@@ -129,6 +129,12 @@ espliciti e commentati dove serve hardware non simulabile qui:
   frontend**: oggi il salvataggio profilo passa solo da Telegram CloudStorage
   lato client; questa API è pronta per essere richiamata quando si vorrà anche
   uno storage server-side.
+- LLM locale per consigli di stile (`profiles/llm.py`, `POST
+  /api/profiles/<id>/advice/`): non nello spec originale, aggiunto su
+  richiesta esplicita. Gira interamente on-device via **Ollama**
+  containerizzato (default `gemma4:latest`) — stessa filosofia privacy del
+  resto del progetto, nessun dato inviato a servizi esterni. Best-effort:
+  il resto dell'API non dipende in alcun modo dalla sua disponibilità.
 - **Fuori scope in questo POC** (richiedono hardware/infra non testabile qui, ma sono
   disegnati nell'architettura sopra): accesso diretto ad ARKit Depth API nativo (solo
   WebXR Depth Sensing lato web), il vero e proprio processo bot Telegram

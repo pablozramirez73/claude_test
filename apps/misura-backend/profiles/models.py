@@ -35,6 +35,11 @@ class Profile(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
 
+    # Generated on-demand by POST /api/profiles/<id>/advice/ (profiles/llm.py,
+    # local Ollama) and cached here so it's not regenerated on every read —
+    # null until the first successful generation.
+    style_advice = models.TextField(blank=True, null=True)
+
     class Meta:
         ordering = ["-created_at"]
 

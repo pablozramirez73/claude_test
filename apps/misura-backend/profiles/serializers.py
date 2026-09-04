@@ -14,8 +14,8 @@ class ProfileSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Profile
-        fields = ["profile_id", "chest_cm", "waist_cm", "hips_cm", "created_at", "telegram_user_id"]
-        read_only_fields = ["created_at"]
+        fields = ["profile_id", "chest_cm", "waist_cm", "hips_cm", "created_at", "telegram_user_id", "style_advice"]
+        read_only_fields = ["created_at", "style_advice"]
 
     def create(self, validated_data):
         raw_telegram_id = validated_data.pop("telegram_user_id", None)

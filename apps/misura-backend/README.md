@@ -20,10 +20,34 @@ all'utente Telegram), in **Django + Django REST Framework + PostgreSQL**.
 - `DELETE /api/profiles/<profile_id>/` — lo cancella (il diritto
   all'oblio GDPR menzionato nel PRD).
 - `GET /api/health/` — health check.
+- `POST /api/profiles/<profile_id>/advice/` — genera (o restituisce, se già
+  in cache) un consiglio di stile/vestibilità in linguaggio naturale per il
+  profilo, usando un **LLM locale via Ollama** (`profiles/llm.py`) — vedi
+  sotto. Aggiungi `?regenerate=true` per forzare una nuova generazione
+  invece di riusare quella salvata.
 
 Nessuna immagine, nessun video, nessuna point cloud: quei dati non lasciano
 mai il client (vedi `apps/misura-miniapp`) — qui arrivano solo le tre
 misure numeriche finali.
+
+## Consigli di stile via LLM locale (Ollama)
+
+Funzionalità aggiunta su richiesta esplicita, non nello spec originale del
+PRD. `POST /api/profiles/<id>/advice/` chiama un modello Ollama (default
+`gemma4:latest`, configurabile con `OLLAMA_MODEL`) che gira **interamente
+in locale** nei container `ollama`/`ollama-pull` — nessuna misura o dato
+esce mai verso un servizio esterno.
+
+- `ollama-pull` scarica il modello al primo avvio e poi esce: la prima volta
+  può richiedere parecchio tempo/spazio disco a seconda della dimensione del
+  modello; alle esecuzioni successive i pesi sono già nel volume
+  `misura_ollama_data`, quindi è istantaneo.
+- Il backend **non aspetta** che `ollama-pull` finisca per partire — nessun'altra
+  funzionalità dipende dall'LLM. Finché il modello non è pronto,
+  `POST .../advice/` risponde `503` con un messaggio chiaro invece di
+  bloccarsi o far fallire il resto dell'API.
+- Per forzare manualmente un nuovo pull (es. dopo aver cambiato
+  `OLLAMA_MODEL`): `docker compose run --rm ollama-pull`.
 
 ## Eseguire con Docker
 
@@ -40,7 +64,7 @@ Le migration girano automaticamente all'avvio del container
 (`entrypoint.sh` attende Postgres, poi esegue `manage.py migrate`).
 
 Porte già occupate? Sono tutte sovrascrivibili — vedi `.env.example`
-(`BACKEND_PORT`, `BACKEND_DEV_PORT`, `POSTGRES_PORT`).
+(`BACKEND_PORT`, `BACKEND_DEV_PORT`, `POSTGRES_PORT`, `OLLAMA_PORT`).
 
 ## Sviluppo locale senza Docker
 

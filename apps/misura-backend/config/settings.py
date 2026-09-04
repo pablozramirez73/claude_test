@@ -121,3 +121,12 @@ REST_FRAMEWORK = {
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 50,
 }
+
+# --- Local LLM (Ollama) --------------------------------------------------
+# Style/fit advice generation (profiles/llm.py) — added on explicit user
+# request, not part of the original docs/PRD-misura.md spec. "ollama" is the
+# Compose service name (see docker-compose.yml); override for a local
+# non-Docker Ollama (typically http://localhost:11434).
+OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL", "http://ollama:11434")
+OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "gemma4:latest")
+OLLAMA_TIMEOUT_SECONDS = float(os.environ.get("OLLAMA_TIMEOUT_SECONDS", "60"))
