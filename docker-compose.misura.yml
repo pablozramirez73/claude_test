@@ -15,6 +15,30 @@
 # not call the backend API yet (see docs/PRD-misura.md §11) — this just
 # starts all three services together for convenience.
 #
+# --- Public HTTPS access for Telegram (the "cloudflared" service) ---
+# Telegram needs a public HTTPS URL for the Mini App — localhost isn't
+# reachable from Telegram's servers or your phone. This runs a persistent
+# Cloudflare Tunnel bound to your own domain (e.g. misura.syntaxnode.work)
+# alongside the rest of the stack. One-time setup on your machine (needs
+# the `cloudflared` CLI, just for this setup step):
+#
+#   cloudflared tunnel login
+#   cloudflared tunnel create misura
+#   cloudflared tunnel route dns misura misura.syntaxnode.work
+#   cloudflared tunnel token misura
+#
+# The last command prints a token — put it in .env here as
+# CLOUDFLARE_TUNNEL_TOKEN=<token> (never commit it, never paste it in
+# chat — .env is already gitignored). Then, in the Cloudflare Zero Trust
+# dashboard (Networks > Tunnels > misura > Public Hostname), add hostname
+# misura.syntaxnode.work -> service HTTP -> URL "frontend:80" (the Docker
+# Compose service name + its internal nginx port — not localhost, since
+# cloudflared runs as a container on the same Compose network below).
+#
+# Then: docker compose -f docker-compose.misura.yml --profile tunnel up
+# (the plain `up`, without --profile tunnel, skips this service entirely —
+# safe to run even before you've set a token).
+#
 # The values after `:-` below (e.g. `misura`, `insecure-dev-key-change-me`)
 # are intentionally-fake dev-only placeholders, not real credentials — see
 # .env.example.
@@ -62,6 +86,24 @@ services:
       - "${MISURA_WEB_PORT:-8091}:80"
     depends_on:
       - backend
+
+  # Opt-in: `docker compose -f docker-compose.misura.yml --profile tunnel up`.
+  # See the setup steps in the comment block above.
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    command: tunnel run
+    # Intentionally NOT a required (`:?...`) interpolation: Compose checks
+    # required variables for every service in the file up front, even ones
+    # this profile skips — that would break plain `docker compose up` for
+    # everyone who hasn't set up a tunnel. Left unset, cloudflared itself
+    # exits with its own clear error when this service is actually started
+    # via --profile tunnel.
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN:-}
+    depends_on:
+      - frontend
+    profiles:
+      - tunnel
 
 volumes:
   misura_postgres_data:
