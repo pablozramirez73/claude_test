@@ -1,0 +1,20 @@
+[Unit]
+Description=ErgoCheck Celery beat (manutenzione periodica)
+After=network.target redis-server.service
+Wants=redis-server.service
+
+[Service]
+Type=simple
+User=ergocheck
+Group=ergocheck
+WorkingDirectory=/srv/ergocheck/backend
+EnvironmentFile=/srv/ergocheck/backend/.env
+ExecStart=/srv/ergocheck/venv/bin/celery -A config beat -l info
+Restart=always
+RestartSec=10
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,8 @@
+node_modules
+dist
+.env
+.env.local
+*.tsbuildinfo
+# I modelli vengono scaricati dentro l'immagine da `npm run fetch:models`:
+# copiarli dal contesto renderebbe il build inutilmente pesante.
+public/mediapipe

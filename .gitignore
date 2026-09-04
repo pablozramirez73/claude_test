@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# Django
+*.sqlite3
+backend/media/
+backend/staticfiles/
+.env
+.env.local
+
+# Node
+node_modules/
+dist/
+.vite/
+
+# Asset MediaPipe (preparati da `npm run fetch:models`, non versionati)
+frontend_tma/public/mediapipe/*.task
+frontend_tma/public/mediapipe/wasm/
+
+# Tooling
+.pytest_cache/
+.coverage
+htmlcov/
+.ruff_cache/
+.DS_Store
+
+# Artefatti di build TypeScript
+*.tsbuildinfo
+*.sqlite3-wal
+*.sqlite3-shm

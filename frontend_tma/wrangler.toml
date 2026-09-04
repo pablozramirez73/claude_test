@@ -1,0 +1,5 @@
+# Configurazione del progetto Cloudflare Pages.
+# Deploy: npm run deploy (richiede CLOUDFLARE_API_TOKEN e CLOUDFLARE_ACCOUNT_ID)
+name = "ergocheck"
+compatibility_date = "2025-01-01"
+pages_build_output_dir = "dist"
