@@ -124,9 +124,12 @@ REST_FRAMEWORK = {
 
 # --- Local LLM (Ollama) --------------------------------------------------
 # Style/fit advice generation (profiles/llm.py) — added on explicit user
-# request, not part of the original docs/PRD-misura.md spec. "ollama" is the
-# Compose service name (see docker-compose.yml); override for a local
-# non-Docker Ollama (typically http://localhost:11434).
-OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL", "http://ollama:11434")
+# request, not part of the original docs/PRD-misura.md spec. Talks to an
+# Ollama instance the user already runs on their own machine (not a
+# container this project manages) — see docker-compose.yml for how the
+# Dockerized backend reaches it via host.docker.internal. This bare
+# 127.0.0.1 default is for running the backend directly with `manage.py
+# runserver` (no Docker in between).
+OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL", "http://127.0.0.1:11434")
 OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "gemma4:latest")
 OLLAMA_TIMEOUT_SECONDS = float(os.environ.get("OLLAMA_TIMEOUT_SECONDS", "60"))

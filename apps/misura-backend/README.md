@@ -34,20 +34,25 @@ misure numeriche finali.
 
 Funzionalità aggiunta su richiesta esplicita, non nello spec originale del
 PRD. `POST /api/profiles/<id>/advice/` chiama un modello Ollama (default
-`gemma4:latest`, configurabile con `OLLAMA_MODEL`) che gira **interamente
-in locale** nei container `ollama`/`ollama-pull` — nessuna misura o dato
+`gemma4:latest`, configurabile con `OLLAMA_MODEL`) — nessuna misura o dato
 esce mai verso un servizio esterno.
 
-- `ollama-pull` scarica il modello al primo avvio e poi esce: la prima volta
-  può richiedere parecchio tempo/spazio disco a seconda della dimensione del
-  modello; alle esecuzioni successive i pesi sono già nel volume
-  `misura_ollama_data`, quindi è istantaneo.
-- Il backend **non aspetta** che `ollama-pull` finisca per partire — nessun'altra
-  funzionalità dipende dall'LLM. Finché il modello non è pronto,
-  `POST .../advice/` risponde `503` con un messaggio chiaro invece di
-  bloccarsi o far fallire il resto dell'API.
-- Per forzare manualmente un nuovo pull (es. dopo aver cambiato
-  `OLLAMA_MODEL`): `docker compose run --rm ollama-pull`.
+**Importante**: questo progetto non installa, avvia o scarica Ollama.
+Usa un'istanza Ollama che **hai già in esecuzione tu** sulla macchina
+(es. `ollama serve`, in ascolto su `127.0.0.1:11434`). Il container del
+backend la raggiunge tramite `host.docker.internal` (mappato in
+`docker-compose.yml` via `extra_hosts`) — da dentro un container,
+`127.0.0.1` indicherebbe il container stesso, non l'host, per questo non
+si può usare direttamente quell'indirizzo.
+
+- Se Ollama non è in esecuzione sul tuo host, `POST .../advice/` risponde
+  `503` con un messaggio chiaro — nessun'altra funzionalità dell'API ne
+  risente.
+- Assicurati di avere già scaricato il modello sul tuo Ollama locale
+  (`ollama pull gemma4:latest` o il tag che preferisci — vedi `OLLAMA_MODEL`
+  in `.env.example`).
+- Se il tuo Ollama ascolta altrove (porta diversa, altra macchina in LAN),
+  sovrascrivi `OLLAMA_BASE_URL` in `.env`.
 
 ## Eseguire con Docker
 
@@ -64,7 +69,7 @@ Le migration girano automaticamente all'avvio del container
 (`entrypoint.sh` attende Postgres, poi esegue `manage.py migrate`).
 
 Porte già occupate? Sono tutte sovrascrivibili — vedi `.env.example`
-(`BACKEND_PORT`, `BACKEND_DEV_PORT`, `POSTGRES_PORT`, `OLLAMA_PORT`).
+(`BACKEND_PORT`, `BACKEND_DEV_PORT`, `POSTGRES_PORT`).
 
 ## Sviluppo locale senza Docker
 

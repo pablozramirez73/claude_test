@@ -131,10 +131,12 @@ espliciti e commentati dove serve hardware non simulabile qui:
   uno storage server-side.
 - LLM locale per consigli di stile (`profiles/llm.py`, `POST
   /api/profiles/<id>/advice/`): non nello spec originale, aggiunto su
-  richiesta esplicita. Gira interamente on-device via **Ollama**
-  containerizzato (default `gemma4:latest`) — stessa filosofia privacy del
-  resto del progetto, nessun dato inviato a servizi esterni. Best-effort:
-  il resto dell'API non dipende in alcun modo dalla sua disponibilità.
+  richiesta esplicita. Chiama un'istanza **Ollama** (default `gemma4:latest`)
+  già in esecuzione sulla macchina dell'utente — non containerizzata da
+  questo progetto, il backend la raggiunge da dentro Docker via
+  `host.docker.internal`. Stessa filosofia privacy del resto del progetto:
+  nessun dato inviato a servizi esterni. Best-effort: il resto dell'API
+  non dipende in alcun modo dalla sua disponibilità.
 - **Fuori scope in questo POC** (richiedono hardware/infra non testabile qui, ma sono
   disegnati nell'architettura sopra): accesso diretto ad ARKit Depth API nativo (solo
   WebXR Depth Sensing lato web), il vero e proprio processo bot Telegram
