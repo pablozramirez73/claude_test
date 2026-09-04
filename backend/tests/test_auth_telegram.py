@@ -122,3 +122,36 @@ def test_repeated_requests_do_not_write_on_every_call(django_assert_num_queries,
     upsert_user_from_init_data(verify_init_data(renamed, TOKEN))
     user.refresh_from_db()
     assert user.last_seen_at > stale
+
+
+@pytest.mark.django_db
+def test_upsert_survives_a_concurrent_creation_race(monkeypatch):
+    """
+    Al primo avvio la Mini App spara in parallelo piu' richieste autenticate
+    (/me/, /thresholds/, ...). Se due arrivano per lo stesso utente nuovo,
+    entrambe vedono "non esiste" e provano a crearlo: la seconda deve
+    accorgersi della corsa persa e proseguire, non rispondere 500.
+    """
+    from django.db import IntegrityError
+
+    from apps.accounts.models import TelegramUser
+
+    data = verify_init_data(build_init_data(4343, username="gara"), TOKEN)
+
+    original_create_user = TelegramUser.objects.create_user
+
+    def create_user_that_lost_the_race(*args, **kwargs):
+        # La riga che la richiesta "concorrente" ha gia' inserito.
+        original_create_user(*args, **kwargs)
+        raise IntegrityError(
+            'duplicate key value violates unique constraint '
+            '"accounts_telegramuser_telegram_id_key"'
+        )
+
+    monkeypatch.setattr(TelegramUser.objects, "create_user", create_user_that_lost_the_race)
+
+    user = upsert_user_from_init_data(data)
+
+    assert user.telegram_id == 4343
+    assert user.username == "gara"
+    assert TelegramUser.objects.filter(telegram_id=4343).count() == 1

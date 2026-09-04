@@ -123,6 +123,7 @@ LAST_SEEN_REFRESH = timedelta(minutes=15)
 
 def upsert_user_from_init_data(data: TelegramInitData):
     """Crea o aggiorna il TelegramUser corrispondente al payload verificato."""
+    from django.db import IntegrityError
     from django.utils import timezone
 
     from .models import TelegramUser
@@ -140,9 +141,17 @@ def upsert_user_from_init_data(data: TelegramInitData):
     now = timezone.now()
     user = TelegramUser.objects.filter(telegram_id=data.telegram_id).first()
     if user is None:
-        return TelegramUser.objects.create_user(
-            telegram_id=data.telegram_id, last_seen_at=now, **fields
-        )
+        try:
+            return TelegramUser.objects.create_user(
+                telegram_id=data.telegram_id, last_seen_at=now, **fields
+            )
+        except IntegrityError:
+            # Al primo avvio la Mini App spara in parallelo piu' richieste
+            # autenticate (/me/, /thresholds/, ...): fra la SELECT e la
+            # INSERT un'altra puo' aver gia' creato lo stesso utente. Si
+            # prosegue con quella riga invece di far fallire la richiesta
+            # con un 500 - e' una corsa persa, non un errore.
+            user = TelegramUser.objects.get(telegram_id=data.telegram_id)
 
     changed = [name for name, value in fields.items() if getattr(user, name) != value]
     for name in changed:
