@@ -249,6 +249,31 @@ prima del tunnel e le voci qui sotto dicono cosa.
 | Risponde la **pagina di un altro server** (Caddy, Apache, nginx di sistema) | il connettore sta raggiungendo un servizio dell'host invece del container: vedi sotto |
 | Le risposte **cambiano a ogni richiesta** | più connettori agganciati allo stesso tunnel, e Cloudflare distribuisce fra loro |
 
+### «hello world»: capire se intercetta prima del tunnel o dopo
+
+Il sintomo «hello world» ha due cause molto diverse fra loro, e vanno
+distinte prima di mettersi a cercare nel posto sbagliato:
+
+```bash
+curl -s https://ergo.syntaxnode.work/favicon.svg
+```
+
+- **Torna ancora «hello world»** → l'intercettazione è a monte del
+  tunnel, su *tutti* i percorsi. Guarda, in ordine di probabilità:
+  1. **DNS → Records**: la voce `ergo` deve essere un **CNAME** verso
+     `<uuid>.cfargotunnel.com`, proxied. Se punta a un `*.workers.dev`,
+     un IP o altro, cancellala e lascia che sia l'hostname pubblico del
+     tunnel a ricrearla.
+  2. **syntaxnode.work → Workers Routes** (livello di zona): cerca
+     `ergo.syntaxnode.work/*` o, peggio, `*.syntaxnode.work/*` — il
+     wildcard cattura anche questo sottodominio.
+  3. **Workers & Pages** → ogni progetto → *Settings → Domains &
+     Routes*: verifica che nessuno abbia agganciato
+     `ergo.syntaxnode.work` come dominio personalizzato.
+- **Torna il file** → il problema è ristretto all'hostname pubblico del
+  tunnel stesso: `Type` è finito su *Hello World* (vedi la riga sopra), o
+  c'è una seconda voce per lo stesso hostname che vince sulla prima.
+
 ### Il connettore raggiunge il server sbagliato
 
 Il valore di `URL` nell'hostname pubblico va letto **dal punto di vista di
