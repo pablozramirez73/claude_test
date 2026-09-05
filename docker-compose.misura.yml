@@ -46,18 +46,23 @@
 # --- Local LLM (style/fit advice, apps/misura-backend/profiles/llm.py) ---
 # Uses an Ollama instance YOU already run on this machine (e.g. `ollama
 # serve`, listening on 127.0.0.1:11434) — nothing here starts, manages, or
-# pulls any model. "host.docker.internal" (mapped below via extra_hosts,
-# native on Docker Desktop) is how a container reaches that host process —
-# plain "127.0.0.1" from inside a container means the container itself.
-# If Ollama isn't running, only POST /api/profiles/<id>/advice/ is
-# affected (503) — nothing else in the stack depends on it.
+# pulls any model. "host.docker.internal" is how a container reaches that
+# host process — plain "127.0.0.1" from inside a container means the
+# container itself. Docker Desktop (Windows/Mac) resolves that name
+# natively, no extra config needed. If Ollama isn't running, only POST
+# /api/profiles/<id>/advice/ is affected (503) — nothing else in the stack
+# depends on it.
+#
+# Note for native Linux Docker Engine (no Docker Desktop): that host
+# resolves "host.docker.internal" only if the backend service adds
+# `extra_hosts: ["host.docker.internal:host-gateway"]` — omitted here
+# because it was found to break host port publishing on Docker Desktop for
+# Windows. Add it back locally if you're on native Linux and need Ollama
+# connectivity.
 x-postgres-env: &postgres-env
   POSTGRES_DB: ${POSTGRES_DB:-misura}
   POSTGRES_USER: ${POSTGRES_USER:-misura}
   POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-misura}
-
-x-backend-extra-hosts: &backend-extra-hosts
-  - "host.docker.internal:host-gateway"
 
 services:
   db:
@@ -87,7 +92,6 @@ services:
       OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
       OLLAMA_MODEL: ${OLLAMA_MODEL:-gemma4:latest}
       OLLAMA_TIMEOUT_SECONDS: ${OLLAMA_TIMEOUT_SECONDS:-60}
-    extra_hosts: *backend-extra-hosts
     ports:
       - "${BACKEND_PORT:-8099}:8000"
     depends_on:

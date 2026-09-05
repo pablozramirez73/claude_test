@@ -21,12 +21,19 @@
 # Uses an Ollama instance YOU already run on this machine (e.g. `ollama
 # serve`, listening on 127.0.0.1:11434) — this project does not run or pull
 # any model itself. From inside the backend container, the host isn't
-# reachable as "127.0.0.1" (that's the container itself) — `extra_hosts`
-# below maps the special name "host.docker.internal" to the host machine
-# on Linux too (Docker Desktop on Mac/Windows already does this natively),
-# which is what OLLAMA_BASE_URL points at by default. Nothing here starts
-# or manages Ollama; if it's not running, POST /api/profiles/<id>/advice/
-# just returns 503 with a clear message — no other endpoint depends on it.
+# reachable as "127.0.0.1" (that's the container itself) — the special name
+# "host.docker.internal", which is what OLLAMA_BASE_URL points at by
+# default, is resolved to the host machine natively by Docker Desktop
+# (Windows/Mac) with no extra config needed. Nothing here starts or manages
+# Ollama; if it's not running, POST /api/profiles/<id>/advice/ just returns
+# 503 with a clear message — no other endpoint depends on it.
+#
+# Note for native Linux Docker Engine (no Docker Desktop): that host
+# resolves "host.docker.internal" only if the backend/backend-dev services
+# add `extra_hosts: ["host.docker.internal:host-gateway"]` — omitted here
+# because it was found to break host port publishing on Docker Desktop for
+# Windows. Add it back locally if you're on native Linux and need Ollama
+# connectivity.
 x-backend-env: &backend-env
   POSTGRES_DB: ${POSTGRES_DB:-misura}
   POSTGRES_USER: ${POSTGRES_USER:-misura}
@@ -39,9 +46,6 @@ x-backend-env: &backend-env
   OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
   OLLAMA_MODEL: ${OLLAMA_MODEL:-gemma4:latest}
   OLLAMA_TIMEOUT_SECONDS: ${OLLAMA_TIMEOUT_SECONDS:-60}
-
-x-backend-extra-hosts: &backend-extra-hosts
-  - "host.docker.internal:host-gateway"
 
 services:
   db:
@@ -65,7 +69,6 @@ services:
     environment:
       <<: *backend-env
       DJANGO_DEBUG: ${DJANGO_DEBUG:-false}
-    extra_hosts: *backend-extra-hosts
     ports:
       - "${BACKEND_PORT:-8099}:8000"
     depends_on:
@@ -78,7 +81,6 @@ services:
     environment:
       <<: *backend-env
       DJANGO_DEBUG: "true"
-    extra_hosts: *backend-extra-hosts
     ports:
       - "${BACKEND_DEV_PORT:-8098}:8000"
     volumes:

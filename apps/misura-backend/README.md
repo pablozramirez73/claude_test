@@ -69,10 +69,20 @@ esce mai verso un servizio esterno.
 **Importante**: questo progetto non installa, avvia o scarica Ollama.
 Usa un'istanza Ollama che **hai già in esecuzione tu** sulla macchina
 (es. `ollama serve`, in ascolto su `127.0.0.1:11434`). Il container del
-backend la raggiunge tramite `host.docker.internal` (mappato in
-`docker-compose.yml` via `extra_hosts`) — da dentro un container,
-`127.0.0.1` indicherebbe il container stesso, non l'host, per questo non
-si può usare direttamente quell'indirizzo.
+backend la raggiunge tramite `host.docker.internal` — da dentro un
+container, `127.0.0.1` indicherebbe il container stesso, non l'host, per
+questo non si può usare direttamente quell'indirizzo. Su Docker Desktop
+(Windows/Mac) questo nome è già risolto in automatico, senza bisogno di
+configurazione aggiuntiva nel `docker-compose.yml`. Se invece usi Docker
+Engine nativo su Linux (senza Docker Desktop) e non riesci a raggiungere
+Ollama, aggiungi tu localmente al servizio `backend`/`backend-dev`:
+```yaml
+extra_hosts:
+  - "host.docker.internal:host-gateway"
+```
+(rimosso di default in questo repo perché su Docker Desktop per Windows
+causava un problema di pubblicazione della porta host del container
+`backend`).
 
 - Se Ollama non è in esecuzione sul tuo host, `POST .../advice/` risponde
   `503` con un messaggio chiaro — nessun'altra funzionalità dell'API ne
