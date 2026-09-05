@@ -1,0 +1,129 @@
+# Runs the full MISURA stack together: PostgreSQL + Django backend +
+# frontend Mini App. This repo hosts several independent apps (see
+# apps/*), so this file is named explicitly rather than claiming the
+# generic "docker-compose.yml" at the repo root — each app also has its
+# own self-contained compose file for running it on its own:
+#   apps/misura-backend/docker-compose.yml   (db + backend only)
+#   apps/misura-miniapp/docker-compose.yml   (frontend only)
+#
+# Usage (from the repo root):
+#   docker compose -f docker-compose.misura.yml up
+#
+# Then open http://localhost:8091 (or whatever MISURA_WEB_PORT you set).
+# Ports are overridable the same way as each app's own compose file — copy
+# .env.example to .env here, or pass vars inline. Note: the frontend does
+# not call the backend API yet (see docs/PRD-misura.md §11) — this just
+# starts all three services together for convenience.
+#
+# --- Public HTTPS access for Telegram (the "cloudflared" service) ---
+# Telegram needs a public HTTPS URL for the Mini App — localhost isn't
+# reachable from Telegram's servers or your phone. This runs a persistent
+# Cloudflare Tunnel bound to your own domain (e.g. misura.syntaxnode.work)
+# alongside the rest of the stack. One-time setup on your machine (needs
+# the `cloudflared` CLI, just for this setup step):
+#
+#   cloudflared tunnel login
+#   cloudflared tunnel create misura
+#   cloudflared tunnel route dns misura misura.syntaxnode.work
+#   cloudflared tunnel token misura
+#
+# The last command prints a token — put it in .env here as
+# CLOUDFLARE_TUNNEL_TOKEN=<token> (never commit it, never paste it in
+# chat — .env is already gitignored). Then, in the Cloudflare Zero Trust
+# dashboard (Networks > Tunnels > misura > Public Hostname), add hostname
+# misura.syntaxnode.work -> service HTTP -> URL "frontend:80" (the Docker
+# Compose service name + its internal nginx port — not localhost, since
+# cloudflared runs as a container on the same Compose network below).
+#
+# Then: docker compose -f docker-compose.misura.yml --profile tunnel up
+# (the plain `up`, without --profile tunnel, skips this service entirely —
+# safe to run even before you've set a token).
+#
+# The values after `:-` below (e.g. `misura`, `insecure-dev-key-change-me`)
+# are intentionally-fake dev-only placeholders, not real credentials — see
+# .env.example.
+#
+# --- Local LLM (style/fit advice, apps/misura-backend/profiles/llm.py) ---
+# Uses an Ollama instance YOU already run on this machine (e.g. `ollama
+# serve`, listening on 127.0.0.1:11434) — nothing here starts, manages, or
+# pulls any model. "host.docker.internal" is how a container reaches that
+# host process — plain "127.0.0.1" from inside a container means the
+# container itself. Docker Desktop (Windows/Mac) resolves that name
+# natively, no extra config needed. If Ollama isn't running, only POST
+# /api/profiles/<id>/advice/ is affected (503) — nothing else in the stack
+# depends on it.
+#
+# Note for native Linux Docker Engine (no Docker Desktop): that host
+# resolves "host.docker.internal" only if the backend service adds
+# `extra_hosts: ["host.docker.internal:host-gateway"]` — omitted here
+# because it was found to break host port publishing on Docker Desktop for
+# Windows. Add it back locally if you're on native Linux and need Ollama
+# connectivity.
+x-postgres-env: &postgres-env
+  POSTGRES_DB: ${POSTGRES_DB:-misura}
+  POSTGRES_USER: ${POSTGRES_USER:-misura}
+  POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-misura}
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      <<: *postgres-env
+    ports:
+      - "${POSTGRES_PORT:-5442}:5432"
+    volumes:
+      - misura_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-misura}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build: ./apps/misura-backend
+    environment:
+      <<: *postgres-env
+      POSTGRES_HOST: db
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:-insecure-dev-key-change-me}
+      DJANGO_DEBUG: ${DJANGO_DEBUG:-false}
+      DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-localhost,127.0.0.1}
+      DJANGO_CORS_ALLOWED_ORIGINS: ${DJANGO_CORS_ALLOWED_ORIGINS:-http://localhost:8091,http://localhost:5183}
+      PROFILE_HASH_SALT: ${PROFILE_HASH_SALT:-misura-dev-salt-change-me}
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-gemma4:latest}
+      OLLAMA_TIMEOUT_SECONDS: ${OLLAMA_TIMEOUT_SECONDS:-60}
+    ports:
+      - "${BACKEND_PORT:-8099}:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./apps/misura-miniapp
+      target: production
+    ports:
+      - "${MISURA_WEB_PORT:-8091}:80"
+    depends_on:
+      - backend
+
+  # Opt-in: `docker compose -f docker-compose.misura.yml --profile tunnel up`.
+  # See the setup steps in the comment block above.
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    command: tunnel run
+    # Intentionally NOT a required (`:?...`) interpolation: Compose checks
+    # required variables for every service in the file up front, even ones
+    # this profile skips — that would break plain `docker compose up` for
+    # everyone who hasn't set up a tunnel. Left unset, cloudflared itself
+    # exits with its own clear error when this service is actually started
+    # via --profile tunnel.
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN:-}
+    depends_on:
+      - frontend
+    profiles:
+      - tunnel
+
+volumes:
+  misura_postgres_data:

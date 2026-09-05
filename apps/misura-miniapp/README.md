@@ -27,6 +27,49 @@ Fuori da Telegram l'app funziona lo stesso: `telegram/webapp.ts` degrada a
 (inclusa la webcam del laptop come stand-in per la fotocamera del telefono)
 è testabile in un browser qualsiasi.
 
+## Eseguire con Docker
+
+Tutto ciò che tocca fotocamera, sensori di movimento e la pipeline
+MediaPipe/WASM gira nel **browser di chi guarda la pagina**, sulla macchina
+host — una Telegram Mini App è solo una pagina web. Il container serve solo
+quella pagina: non serve alcun passthrough di dispositivi (`--device`,
+`/dev/video0`, ecc.).
+
+```bash
+cd apps/misura-miniapp
+
+# Build di produzione (nginx) → http://localhost:8091
+docker compose up misura
+
+# Server di sviluppo con hot reload → http://localhost:5183
+docker compose up misura-dev
+```
+
+Apri l'URL in un browser sulla stessa macchina. Importante: apri **proprio
+`localhost:<porta>`** — il browser considera `http://localhost` un contesto
+sicuro (secure context) anche senza HTTPS, il che è ciò che permette a
+`getUserMedia`/`DeviceMotionEvent` di funzionare. Aprendo l'app da un altro
+dispositivo sulla LAN tramite l'IP della macchina host, senza HTTPS la
+fotocamera verrebbe bloccata dal browser — per quel caso serve un reverse
+proxy TLS davanti al container (fuori scope per questo POC locale).
+
+**Porte già occupate?** Sono configurabili senza toccare `docker-compose.yml`,
+copiando `.env.example` in `.env` (stessa cartella) oppure passandole inline:
+
+```bash
+cp .env.example .env   # poi modifica i valori dentro .env
+# oppure, una tantum:
+MISURA_WEB_PORT=9000 MISURA_DEV_PORT=9001 docker compose up misura
+```
+
+Senza Docker Compose, gli stessi target si possono buildare ed eseguire a mano
+(qui le porte si scelgono direttamente nel flag `-p host:container`):
+
+```bash
+docker build --target production -t misura:prod . && docker run -p 9000:80 misura:prod
+docker build --target dev -t misura:dev .        && docker run -p 9001:5173 -v "$PWD":/app -v /app/node_modules misura:dev
+```
+
 ## Cosa è reale in questo POC e cosa è un fallback dichiarato
 
 - **Reale**: cattura webcam, controllo di stabilità da `DeviceMotionEvent`,

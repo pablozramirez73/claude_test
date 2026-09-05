@@ -1,0 +1,36 @@
+# Run MISURA locally in Docker.
+#
+#   docker compose up misura          # production build, nginx, http://localhost:8091
+#   docker compose up misura-dev      # hot-reloading dev server, http://localhost:5183
+#
+# Host ports are overridable (e.g. if 8091/5183 are also taken on your
+# machine) without editing this file — either export the env var, or drop a
+# .env file next to this one (see .env.example):
+#
+#   MISURA_WEB_PORT=9000 MISURA_DEV_PORT=9001 docker compose up misura
+#
+# Open the URL in a browser on this same machine (or your phone, over the
+# same LAN, using this machine's IP instead of localhost — see the app's
+# README for why plain HTTP only works when the page itself is loaded from
+# "localhost"). Camera/motion permission prompts and the MediaPipe pipeline
+# all run client-side in that browser tab; nothing device-specific happens
+# inside the containers.
+services:
+  misura:
+    build:
+      context: .
+      target: production
+    ports:
+      - "${MISURA_WEB_PORT:-8091}:80"
+
+  misura-dev:
+    build:
+      context: .
+      target: dev
+    ports:
+      - "${MISURA_DEV_PORT:-5183}:5173"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    environment:
+      - CHOKIDAR_USEPOLLING=1
