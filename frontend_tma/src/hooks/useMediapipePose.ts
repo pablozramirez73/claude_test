@@ -105,6 +105,12 @@ export function useMediapipePose({
     kneeAngle: new AngleAccumulator(),
   });
   const lastWarningRef = useRef<string>('');
+  // Se detectForVideo va in eccezione (contesto GPU perso a runtime) si
+  // ripiega su CPU una sola volta; se continua a fallire si arrende con un
+  // errore visibile invece di restare bloccati senza alcun frame analizzato.
+  const gpuFallbackTriedRef = useRef(false);
+  const consecutiveErrorsRef = useRef(0);
+  const MAX_CONSECUTIVE_ERRORS = 10;
 
   /* ------------------------------------------------------- caricamento modelli */
 
@@ -118,28 +124,51 @@ export function useMediapipePose({
         const fileset = await vision.FilesetResolver.forVisionTasks(WASM_BASE);
         if (cancelled) return;
 
-        poseRef.current = await vision.PoseLandmarker.createFromOptions(fileset, {
-          baseOptions: { modelAssetPath: POSE_MODEL, delegate: 'GPU' },
-          runningMode: 'VIDEO',
-          numPoses: 1,
-          minPoseDetectionConfidence: 0.5,
-          minTrackingConfidence: 0.5,
-        });
+        // Alcune WebView embedded (in particolare quella di Telegram su
+        // Android) rifiutano o rompono silenziosamente il delegate GPU di
+        // MediaPipe: il modello si crea ma non rileva mai nulla. Si tenta
+        // prima la GPU e, se la creazione fallisce, si ripiega su CPU -
+        // piu' lenta ma compatibile ovunque.
+        const createWithFallback = async <T>(
+          label: string,
+          factory: (delegate: 'GPU' | 'CPU') => Promise<T>,
+        ): Promise<T> => {
+          try {
+            return await factory('GPU');
+          } catch (err) {
+            console.warn(`${label}: delegate GPU non disponibile, ripiego su CPU.`, err);
+            return factory('CPU');
+          }
+        };
+
+        poseRef.current = await createWithFallback('PoseLandmarker', (delegate) =>
+          vision.PoseLandmarker.createFromOptions(fileset, {
+            baseOptions: { modelAssetPath: POSE_MODEL, delegate },
+            runningMode: 'VIDEO',
+            numPoses: 1,
+            minPoseDetectionConfidence: 0.5,
+            minTrackingConfidence: 0.5,
+          }),
+        );
 
         if (enableFace && !cancelled) {
-          faceRef.current = await vision.FaceLandmarker.createFromOptions(fileset, {
-            baseOptions: { modelAssetPath: FACE_MODEL, delegate: 'GPU' },
-            runningMode: 'VIDEO',
-            numFaces: 1,
-          });
+          faceRef.current = await createWithFallback('FaceLandmarker', (delegate) =>
+            vision.FaceLandmarker.createFromOptions(fileset, {
+              baseOptions: { modelAssetPath: FACE_MODEL, delegate },
+              runningMode: 'VIDEO',
+              numFaces: 1,
+            }),
+          );
         }
 
         if (enableHand && !cancelled) {
-          handRef.current = await vision.HandLandmarker.createFromOptions(fileset, {
-            baseOptions: { modelAssetPath: HAND_MODEL, delegate: 'GPU' },
-            runningMode: 'VIDEO',
-            numHands: 2,
-          });
+          handRef.current = await createWithFallback('HandLandmarker', (delegate) =>
+            vision.HandLandmarker.createFromOptions(fileset, {
+              baseOptions: { modelAssetPath: HAND_MODEL, delegate },
+              runningMode: 'VIDEO',
+              numHands: 2,
+            }),
+          );
         }
 
         if (!cancelled) setStatus('ready');
@@ -215,6 +244,8 @@ export function useMediapipePose({
     startedAtRef.current = 0;
     lastVideoTimeRef.current = -1;
     lastWarningRef.current = '';
+    gpuFallbackTriedRef.current = false;
+    consecutiveErrorsRef.current = 0;
     setLive(EMPTY_LIVE);
   }, []);
 
@@ -244,50 +275,79 @@ export function useMediapipePose({
       lastVideoTimeRef.current = video.currentTime;
       frameCountRef.current += 1;
 
-      const result = landmarker.detectForVideo(video, now);
-      const world = result.worldLandmarks?.[0] as Landmark[] | undefined;
-      const screen = result.landmarks?.[0] as Landmark[] | undefined;
-
       let angles: PoseAngles | null = null;
-      if (world && screen) {
-        // La visibilita' sta nei landmark normalizzati: si combinano i due set.
-        const enriched = world.map((point, index) => ({
-          ...point,
-          visibility: screen[index]?.visibility ?? 1,
-        }));
-        angles = computeAngles(enriched);
-      }
-
       let warnings: LiveWarning[] = [];
-      if (angles) {
-        const accumulators = accumulatorsRef.current;
-        accumulators.trunkFlexion.push(angles.trunkFlexion);
-        accumulators.trunkTwist.push(angles.trunkTwist);
-        accumulators.neckFlexion.push(angles.neckFlexion);
-        accumulators.shoulderElevation.push(angles.shoulderElevation);
-        accumulators.elbowAngle.push(angles.elbowAngle);
-        accumulators.kneeAngle.push(angles.kneeAngle);
-        confidenceRef.current.sum += angles.confidence;
-        confidenceRef.current.count += 1;
+      let screen: Landmark[] | undefined;
 
-        warnings = liveWarnings(angles, limits);
-        const signature = warnings.map((w) => w.code).join(',');
-        if (signature && signature !== lastWarningRef.current) {
-          warnings.forEach((warning) => onWarning?.(warning));
+      try {
+        const result = landmarker.detectForVideo(video, now);
+        const world = result.worldLandmarks?.[0] as Landmark[] | undefined;
+        screen = result.landmarks?.[0] as Landmark[] | undefined;
+
+        if (world && screen) {
+          // La visibilita' sta nei landmark normalizzati: si combinano i due set.
+          const enriched = world.map((point, index) => ({
+            ...point,
+            visibility: screen?.[index]?.visibility ?? 1,
+          }));
+          angles = computeAngles(enriched);
         }
-        lastWarningRef.current = signature;
-      }
 
-      if (faceRef.current) {
-        const face = faceRef.current.detectForVideo(video, now).faceLandmarks?.[0];
-        if (face) fatigueRef.current.push(face as Landmark[]);
-      }
+        if (angles) {
+          const accumulators = accumulatorsRef.current;
+          accumulators.trunkFlexion.push(angles.trunkFlexion);
+          accumulators.trunkTwist.push(angles.trunkTwist);
+          accumulators.neckFlexion.push(angles.neckFlexion);
+          accumulators.shoulderElevation.push(angles.shoulderElevation);
+          accumulators.elbowAngle.push(angles.elbowAngle);
+          accumulators.kneeAngle.push(angles.kneeAngle);
+          confidenceRef.current.sum += angles.confidence;
+          confidenceRef.current.count += 1;
 
-      if (handRef.current) {
-        const hands = handRef.current.detectForVideo(video, now).landmarks;
-        const grip = hands?.[0] ? classifyGrip(hands[0] as Landmark[]) : undefined;
-        if (grip) {
-          gripCountsRef.current[grip] = (gripCountsRef.current[grip] ?? 0) + 1;
+          warnings = liveWarnings(angles, limits);
+          const signature = warnings.map((w) => w.code).join(',');
+          if (signature && signature !== lastWarningRef.current) {
+            warnings.forEach((warning) => onWarning?.(warning));
+          }
+          lastWarningRef.current = signature;
+        }
+
+        if (faceRef.current) {
+          const face = faceRef.current.detectForVideo(video, now).faceLandmarks?.[0];
+          if (face) fatigueRef.current.push(face as Landmark[]);
+        }
+
+        if (handRef.current) {
+          const hands = handRef.current.detectForVideo(video, now).landmarks;
+          const grip = hands?.[0] ? classifyGrip(hands[0] as Landmark[]) : undefined;
+          if (grip) {
+            gripCountsRef.current[grip] = (gripCountsRef.current[grip] ?? 0) + 1;
+          }
+        }
+
+        consecutiveErrorsRef.current = 0;
+      } catch (err) {
+        // Senza questo catch un'eccezione qui (tipico di un contesto GPU
+        // perso a meta' sessione in una WebView embedded) interrompe per
+        // sempre il ciclo requestAnimationFrame: l'app resta aperta ma non
+        // analizza piu' nessun frame, senza mostrare alcun errore.
+        consecutiveErrorsRef.current += 1;
+        console.error('Rilevamento del frame fallito', err);
+
+        if (!gpuFallbackTriedRef.current) {
+          gpuFallbackTriedRef.current = true;
+          landmarker.setOptions({ baseOptions: { delegate: 'CPU' } }).catch((fallbackErr) => {
+            console.error('Ripiego su CPU fallito', fallbackErr);
+          });
+        }
+
+        if (consecutiveErrorsRef.current >= MAX_CONSECUTIVE_ERRORS) {
+          stop();
+          setStatus('error');
+          setError(
+            'Rilevamento non riuscito su questo dispositivo. Riprova, oppure apri la Mini App in un altro browser.',
+          );
+          return;
         }
       }
 
