@@ -1,0 +1,40 @@
+# Override per pubblicare l'intera applicazione da un computer personale
+# tramite Cloudflare Tunnel, senza aprire porte sul router.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.tunnel.yml \
+#     up -d --build
+#
+# Impostando COMPOSE_FILE nel .env di radice (vedi .env.example) basta
+# `docker compose up -d --build`: l'override viene incluso da solo, e non
+# si rischia di avviare lo stack dimenticando il connettore.
+#
+# Mini App e API stanno sulla stessa origine: il tunnel ha un solo hostname
+# pubblico, `syntaxnode.work` -> `tma:80`, e nginx dentro il container `tma`
+# smista /api/ e /ws/ verso `ergo-api:7000`.
+
+services:
+  ergo-api:
+    # Nessuna pubblicazione verso l'esterno: al backend si arriva solo
+    # attraverso nginx, sulla rete interna di compose. Il binding su
+    # loopback resta comodo per interrogarlo durante la diagnosi.
+    #
+    # `!override` e' necessario: nel merge dei file compose le liste di
+    # porte si sommano, quindi senza di esso resterebbe attiva anche la
+    # pubblicazione su 0.0.0.0 del file principale.
+    ports: !override
+      - "127.0.0.1:7000:7000"
+
+  tma:
+    ports: !override
+      - "127.0.0.1:5190:80"
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    # Tunnel gestito da remoto: nessun certificato o file di credenziali sul
+    # disco, la configurazione sta nella dashboard. Il token va in un file
+    # .env accanto a questo compose (CLOUDFLARE_TUNNEL_TOKEN=...).
+    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN:?serve CLOUDFLARE_TUNNEL_TOKEN}
+    depends_on:
+      - tma
+      - ergo-api

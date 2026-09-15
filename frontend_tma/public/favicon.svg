@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img"
+     aria-label="ErgoCheck">
+  <!-- Il segno e' l'angolo misurato fra tronco e piano d'appoggio: e' cio'
+       che l'app calcola, e resta leggibile anche a 16 px. -->
+  <rect width="32" height="32" rx="7" fill="#0B6BCB"/>
+  <g fill="none" stroke="#fff" stroke-linecap="round">
+    <!-- arco dell'angolo, annidato fra le due linee; e' il primo elemento
+         a sparire alle dimensioni minime, senza che il segno si rompa -->
+    <path d="M14 24 A5 5 0 0 0 11.98 19.98" stroke-width="1.6" opacity=".8"/>
+    <!-- piano d'appoggio -->
+    <path d="M9 24h14" stroke-width="3.2"/>
+    <!-- tronco flesso -->
+    <path d="M9 24 20.5 8.5" stroke-width="3.6"/>
+  </g>
+</svg>

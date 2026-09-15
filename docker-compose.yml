@@ -1,0 +1,88 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ergocheck
+      POSTGRES_USER: ergocheck
+      POSTGRES_PASSWORD: ergocheck
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ergocheck"]
+      interval: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      retries: 10
+
+  ergo-api:
+    build: ./backend
+    env_file: ./backend/.env
+    environment:
+      DATABASE_URL: postgres://ergocheck:ergocheck@db:5432/ergocheck
+      REDIS_URL: redis://redis:6379/0
+    command: >
+      sh -c "python manage.py migrate &&
+             daphne -b 0.0.0.0 -p 7000 config.asgi:application"
+    ports:
+      # Il tunnel non passa da qui: raggiunge `ergo-api:7000` direttamente
+      # sulla rete di compose. Questa pubblicazione serve solo per
+      # interrogare l'API dall'host.
+      - "7000:7000"
+    volumes:
+      - media:/app/media
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  worker:
+    build: ./backend
+    env_file: ./backend/.env
+    environment:
+      DATABASE_URL: postgres://ergocheck:ergocheck@db:5432/ergocheck
+      REDIS_URL: redis://redis:6379/0
+    command: celery -A config worker -l info --concurrency 2
+    volumes:
+      - media:/app/media
+    depends_on:
+      - ergo-api
+
+  beat:
+    build: ./backend
+    env_file: ./backend/.env
+    environment:
+      DATABASE_URL: postgres://ergocheck:ergocheck@db:5432/ergocheck
+      REDIS_URL: redis://redis:6379/0
+    command: celery -A config beat -l info
+    depends_on:
+      - ergo-api
+
+  bot:
+    build: ./backend
+    env_file: ./backend/.env
+    environment:
+      DATABASE_URL: postgres://ergocheck:ergocheck@db:5432/ergocheck
+      REDIS_URL: redis://redis:6379/0
+    command: python manage.py run_bot
+    depends_on:
+      - ergo-api
+
+  # Punto d'ingresso unico: serve la Mini App compilata e inoltra /api/,
+  # /ws/, /admin/, /static/ e /media/ al backend.
+  tma:
+    build: ./frontend_tma
+    ports:
+      - "5190:80"
+    depends_on:
+      - ergo-api
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  media:

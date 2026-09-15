@@ -1,0 +1,21 @@
+[Unit]
+Description=ErgoCheck Celery worker (report PDF)
+After=network.target redis-server.service
+Wants=redis-server.service
+
+[Service]
+Type=simple
+User=ergocheck
+Group=ergocheck
+WorkingDirectory=/srv/ergocheck/backend
+EnvironmentFile=/srv/ergocheck/backend/.env
+ExecStart=/srv/ergocheck/venv/bin/celery -A config worker -l info --concurrency 2
+Restart=always
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ReadWritePaths=/srv/ergocheck/media
+
+[Install]
+WantedBy=multi-user.target
